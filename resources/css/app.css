@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Brand ── */
+  --color-primary:       #B47A42;   /* Gold Accent        */
+  --color-primary-dark:  #9a6633;   /* Gold Dark (hover)  */
+  --color-primary-light: #f5ece0;   /* Gold Light tint    */
+
+  /* ── Legacy aliases ── */
+  --color-navy:          #B47A42;
+  --color-burgundy:      #B47A42;
+
+  /* ── Accent / Gold ── */
+  --color-accent:        #B47A42;   /* Gold Accent        */
+  --color-accent-light:  #C9955A;   /* Gold Light         */
+
+  /* ── Surfaces ── */
+  --color-cream:         #F5F1EB;   /* Main Background    */
+  --color-card:          #FFFCF7;   /* Card Background    */
+  --color-beige:         #EDE5DC;   /* subtle tint        */
+
+  /* ── Border ── */
+  --color-border:        #DED5CB;
+
+  /* ── Text ── */
+  --color-heading:       #211B17;   /* Primary Text       */
+  --color-body:          #766C63;   /* Secondary Text     */
+
+  /* ── Semantic ── */
+  --color-success:       #55745A;
+  --color-warning:       #B47A42;
+  --color-danger:        #A52A2A;
+}
+
+/* ── Base ── */
+body {
+  background-color: var(--color-cream);
+  color: var(--color-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-heading);
+}
+
+/* ── Utility aliases ── */
+.text-burgundy  { color: var(--color-primary); }
+.bg-burgundy    { background-color: var(--color-primary); }
+.text-navy      { color: var(--color-primary); }
+.bg-navy        { background-color: var(--color-primary); }
