@@ -756,4 +756,6 @@
     </script>
 </body>
 </html>
+</body>
+</html>
 <?php /**PATH C:\Users\visha\Downloads\edu_verse-10-05-26\edu_verse\resources\views/layouts/app.blade.php ENDPATH**/ ?>

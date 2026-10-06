@@ -112,3 +112,11 @@ email jana chaiye be kayda
 
 ab muje website panel name ka menu bnana h esme esme 
 jisme submenu : navbar header menu , footer menu , contect details ,  
+
+
+
+ab muje website ka kaam krna 
+ye ab to admin panel ka kaam tha 
+ab esme frontend ka kaam krna h 
+ADMIN panel me website krke menu bnana jha se frontent ka sara kaam editable hoga 
+frontent me home screen bnao pahle and uska website menu  submenu ho jisme home page ke andar her section jese header text , button text etc boddy footer sab change ho
