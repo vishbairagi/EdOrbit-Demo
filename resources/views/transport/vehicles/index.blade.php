@@ -56,6 +56,8 @@
                     <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Vehicle Model</th>
                     <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Driver Name</th>
                     <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Driver Phone</th>
+                    <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">License Number</th>
+                    <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Note</th>
                     <th scope="col" class="px-4 py-2 text-right font-semibold text-white uppercase tracking-wider">Action</th>
                 </tr>
             </thead>
@@ -67,9 +69,11 @@
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
                         </td>
                         <td class="px-4 py-3 font-bold text-heading">{{ $vehicle->vehicle_number }}</td>
-                        <td class="px-4 py-3 text-body">{{ $vehicle->vehicle_model ?? '—' }}</td>
-                        <td class="px-4 py-3 text-body">{{ $vehicle->driver_name }}</td>
-                        <td class="px-4 py-3 text-body">{{ $vehicle->driver_phone }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $vehicle->vehicle_model ?? '—' }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $vehicle->driver_name }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $vehicle->driver_phone }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $vehicle->license_number ?? '—' }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $vehicle->note ?? '—' }}</td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('transport.vehicles.edit', $vehicle) }}" class="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-bold text-navy hover:bg-gray-50"><i data-lucide="edit" class="h-3.5 w-3.5"></i> Edit</a>

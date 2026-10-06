@@ -177,6 +177,7 @@ Route::prefix('transport')->name('transport.')->middleware('permission')->group(
     Route::resource('routes', \App\Http\Controllers\TransportRouteController::class);
     Route::post('/routes/bulk-delete', [\App\Http\Controllers\TransportRouteController::class, 'bulkDestroy'])->name('routes.bulk-destroy');
     Route::get('/assign-students', [\App\Http\Controllers\TransportAssignController::class, 'index'])->name('assign-students.index');
+    Route::post('/assign-students/bulk-destroy', [\App\Http\Controllers\TransportAssignController::class, 'bulkDestroy'])->name('assign-students.bulk-destroy');
     Route::post('/assign-students/{student}', [\App\Http\Controllers\TransportAssignController::class, 'assign'])->name('assign-students.assign');
     Route::get('/report', [\App\Http\Controllers\TransportController::class, 'report'])->name('report');
 });
@@ -200,6 +201,7 @@ Route::prefix('academic')->name('academic.')->middleware('permission')->group(fu
     Route::get('/class-sections/export', [SmAcademicClassSectionController::class, 'export'])->name('class-sections.export');
     Route::get('/class-sections/import/demo', [SmAcademicClassSectionController::class, 'importDemo'])->name('class-sections.import-demo');
     Route::post('/class-sections/import', [SmAcademicClassSectionController::class, 'import'])->name('class-sections.import');
+    Route::post('/class-sections/bulk-delete', [SmAcademicClassSectionController::class, 'bulkDestroy'])->name('class-sections.bulk-destroy');
     Route::get('/class-sections', [SmAcademicClassSectionController::class, 'index'])->name('class-sections.index');
     Route::post('/class-sections/{schoolClass}/sections', [SmAcademicClassSectionController::class, 'addSection'])->name('class-sections.sections.store');
     Route::delete('/class-sections/sections/{section}', [SmAcademicClassSectionController::class, 'destroySection'])->name('class-sections.sections.destroy');
@@ -240,6 +242,7 @@ Route::prefix('academic')->name('academic.')->middleware('permission')->group(fu
     Route::get('/assign-subjects/export', [AssignSubjectController::class, 'export'])->name('assign-subjects.export');
     Route::get('/assign-subjects/import/demo', [AssignSubjectController::class, 'importDemo'])->name('assign-subjects.import-demo');
     Route::post('/assign-subjects/import', [AssignSubjectController::class, 'import'])->name('assign-subjects.import');
+    Route::post('/assign-subjects/bulk-delete', [AssignSubjectController::class, 'bulkDestroy'])->name('assign-subjects.bulk-destroy');
     Route::get('/assign-subjects', [AssignSubjectController::class, 'index'])->name('assign-subjects.index');
     Route::get('/assign-subjects/{subject}/teachers', [AssignSubjectController::class, 'teachers'])->name('assign-subjects.teachers');
     Route::post('/assign-subjects/{subject}/teachers', [AssignSubjectController::class, 'assign'])->name('assign-subjects.assign');
@@ -285,6 +288,7 @@ Route::prefix('examination')->name('examination.')->middleware('permission')->gr
     Route::delete('/groups/{examGroup}', [ExaminationController::class, 'destroyGroup'])->name('groups.destroy');
 
     Route::get('/admit-cards', [ExaminationWorkflowController::class, 'admitCards'])->name('admit-cards.index');
+    Route::post('/admit-cards/bulk-delete-exams', [ExaminationWorkflowController::class, 'bulkDestroyAdmitCardsByExam'])->name('admit-cards.bulk-destroy-exams');
     Route::get('/admit-cards/{exam}', [ExaminationWorkflowController::class, 'viewAdmitCards'])->name('admit-cards.view');
     Route::post('/admit-cards/{exam}/bulk-delete', [ExaminationWorkflowController::class, 'bulkDeleteAdmitCards'])->name('admit-cards.bulk-delete');
     Route::put('/admit-cards/{exam}/cards/{admitCard}', [ExaminationWorkflowController::class, 'updateAdmitCard'])->name('admit-cards.update');
@@ -294,6 +298,7 @@ Route::prefix('examination')->name('examination.')->middleware('permission')->gr
     Route::get('/admit-cards/{exam}/print', [ExaminationWorkflowController::class, 'printAdmitCards'])->name('admit-cards.print');
 
     Route::get('/results', [ExaminationWorkflowController::class, 'results'])->name('results.index');
+    Route::post('/results/bulk-delete-exams', [ExaminationWorkflowController::class, 'bulkDestroyResultsByExam'])->name('results.bulk-destroy-exams');
     Route::get('/results/{exam}/generate', [ExaminationWorkflowController::class, 'generateResultsForm'])->name('results.generate-form');
     Route::get('/results/{exam}', [ExaminationWorkflowController::class, 'viewResults'])->name('results.view');
     Route::post('/results', [ExaminationWorkflowController::class, 'saveResults'])->name('results.store');

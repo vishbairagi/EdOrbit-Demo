@@ -68,6 +68,22 @@ class TransportAssignController extends Controller
         return view('transport.assign.index', compact('students', 'routes', 'classes', 'sections', 'school', 'session'));
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:students,id'
+        ]);
+
+        $students = Student::whereIn('id', $request->ids)->get();
+        foreach ($students as $student) {
+            $student->transportRoutes()->detach();
+            \App\Models\TransportInvoice::where('student_id', $student->id)->delete();
+        }
+
+        return back()->with('success', 'Selected students unassigned successfully and related transport invoices removed.');
+    }
+
     public function assign(Request $request, Student $student)
     {
         $request->validate([
@@ -78,8 +94,9 @@ class TransportAssignController extends Controller
             $student->transportRoutes()->sync([$request->route_id]);
         } else {
             $student->transportRoutes()->detach();
+            \App\Models\TransportInvoice::where('student_id', $student->id)->delete();
         }
 
-        return back()->with('success', 'Route assigned successfully to student.');
+        return back()->with('success', 'Route assigned/unassigned successfully.');
     }
 }

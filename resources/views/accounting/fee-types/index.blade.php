@@ -62,7 +62,7 @@
                         <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"
                             class="w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600" title="Select All">
                     </th>
-                    <th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Fee Name</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Classes</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Student Type</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Period</th><th class="px-4 py-2 text-right font-semibold text-white uppercase tracking-wider">Amount</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Admission Invoice</th><th class="px-4 py-2 text-right font-semibold text-white uppercase tracking-wider">Actions</th></tr></thead>
+                    <th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Fee Name</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Classes</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Sections</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Student Type</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Period</th><th class="px-4 py-2 text-right font-semibold text-white uppercase tracking-wider">Amount</th><th class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Admission Invoice</th><th class="px-4 py-2 text-right font-semibold text-white uppercase tracking-wider">Actions</th></tr></thead>
             <tbody class="divide-y divide-gray-100 bg-white">
                 @forelse($feeTypes as $feeType)
                     <tr class="hover:bg-gray-50 transition-colors" data-id="{{ $feeType->id }}">
@@ -70,12 +70,13 @@
                             <input type="checkbox" value="{{ $feeType->id }}" onchange="updateBulkToolbar()"
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
                         </td>
-                        <td class="px-4 py-3 font-semibold text-heading">{{ $feeType->name }}</td>
-                        <td class="px-4 py-3 text-body">{{ $feeType->classes->pluck('name')->join(', ') }}</td>
-                        <td class="px-4 py-3 text-body">{{ $feeType->studentType?->name ?? (['all' => 'All Students', 'new_admission' => 'New Admissions', 'existing' => 'Existing Students'][$feeType->student_type] ?? $feeType->student_type) }}</td>
-                        <td class="px-4 py-3 text-body">{{ $feeType->period->name }}</td>
-                        <td class="px-4 py-3 text-right font-semibold text-heading">{{\App\Models\SchoolSetting::getCurrencySymbol()}}{{ number_format((float) $feeType->amount, 2) }}</td>
-                        <td class="px-4 py-3">{{ $feeType->invoice_on_admission ? 'Yes' : 'No' }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $feeType->name }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $feeType->classes->pluck('name')->join(', ') }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $feeType->sections->isNotEmpty() ? $feeType->sections->pluck('name')->join(', ') : 'All' }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $feeType->studentType?->name ?? (['all' => 'All Students', 'new_admission' => 'New Admissions', 'existing' => 'Existing Students'][$feeType->student_type] ?? $feeType->student_type) }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $feeType->period->name }}</td>
+                        <td class="px-4 py-3 text-right font-bold text-heading">{{\App\Models\SchoolSetting::getCurrencySymbol()}}{{ number_format((float) $feeType->amount, 2) }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $feeType->invoice_on_admission ? 'Yes' : 'No' }}</td>
                         <td class="px-4 py-3"><div class="flex justify-end gap-3">
                             <button onclick='openEditModal(@json($feeType))' class="text-blue-700 hover:text-blue-900" title="Edit fee type"><i data-lucide="pencil" class="h-4 w-4"></i></button>
                             <form method="POST" action="{{ route('accounting.fee-types.destroy', $feeType) }}" onsubmit="return confirm('Delete this fee type?')">@csrf @method('DELETE')<button type="submit" class="text-red-600 hover:text-red-800" title="Delete fee type"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>

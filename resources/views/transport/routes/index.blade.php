@@ -53,7 +53,7 @@
                             class="w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600" title="Select All">
                     </th>
                     <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Route Name</th>
-                    <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Vehicles</th>
+                    <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Transport Vehicles</th>
                     <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Period</th>
                     <th scope="col" class="px-4 py-2 font-semibold text-white uppercase tracking-wider">Fare</th>
                     <th scope="col" class="px-4 py-2 text-right font-semibold text-white uppercase tracking-wider">Action</th>
@@ -67,13 +67,13 @@
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
                         </td>
                         <td class="px-4 py-3 font-bold text-heading">{{ $route->route_name }}</td>
-                        <td class="px-4 py-3 text-body">
+                        <td class="px-4 py-3 font-bold text-heading">
                             @foreach($route->vehicles as $vehicle)
                                 <span class="inline-block bg-gray-100 rounded px-2 py-1 text-[10px] mr-1">{{ $vehicle->vehicle_number }}</span>
                             @endforeach
                         </td>
-                        <td class="px-4 py-3 text-body">{{ $route->period ? $route->period->name : '—' }}</td>
-                        <td class="px-4 py-3 text-body">{{ \App\Models\SchoolSetting::getCurrencySymbol() }}{{ number_format($route->route_fare, 2) }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ $route->period ? $route->period->name : '—' }}</td>
+                        <td class="px-4 py-3 font-bold text-heading">{{ \App\Models\SchoolSetting::getCurrencySymbol() }}{{ number_format($route->route_fare, 2) }}</td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('transport.routes.edit', $route) }}" class="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-bold text-navy hover:bg-gray-50"><i data-lucide="edit" class="h-3.5 w-3.5"></i> Edit</a>

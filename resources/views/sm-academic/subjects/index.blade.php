@@ -178,7 +178,7 @@
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
                         </td>
                             <td class="px-4 py-3 text-body">{{ $index + 1 }}</td>
-                            <td class="px-4 py-3 font-semibold text-heading">{{ $subject->name }}</td>
+                            <td class="px-4 py-3 font-bold text-gray-900">{{ $subject->name }}</td>
                             <td class="px-4 py-3">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                                     <i data-lucide="graduation-cap" class="w-3 h-3 mr-1"></i>
@@ -281,7 +281,7 @@
                             @foreach($classSubjects as $idx => $subject)
                                 <tr class="hover:bg-gray-50/80 transition-colors">
                                     <td class="px-4 py-3 text-body text-xs font-medium">{{ $idx + 1 }}</td>
-                                    <td class="px-4 py-3 font-semibold text-heading">{{ $subject->name }}</td>
+                                    <td class="px-4 py-3 font-bold text-gray-900">{{ $subject->name }}</td>
                                     <td class="px-4 py-3">
                                         @if($subject->code)
                                             <code class="px-2 py-0.5 bg-gray-100 rounded text-xs font-mono text-heading border">{{ $subject->code }}</code>

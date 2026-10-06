@@ -5,11 +5,11 @@
 @section('content')
 <div class="max-w-5xl mx-auto">
     <!-- Settings Header & Tabs -->
-    <div class="mb-6 flex gap-2 border-b border-gray-200 overflow-x-auto" id="settings-tabs">
-        <button type="button" class="tab-btn whitespace-nowrap px-4 py-2 border-b-2 border-primary text-primary font-semibold text-sm transition-colors" data-target="#tab-general">General</button>
-        <button type="button" class="tab-btn whitespace-nowrap px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-sm transition-colors" data-target="#tab-appearances">Appearances</button>
-        <button type="button" class="tab-btn whitespace-nowrap px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-sm transition-colors" data-target="#tab-reset">Reset Plugin</button>
-        <button type="button" class="tab-btn whitespace-nowrap px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-sm transition-colors" data-target="#tab-demo">Demo Data</button>
+    <div class="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4" id="settings-tabs">
+        <button type="button" class="tab-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors bg-navy text-white shadow-sm" data-target="#tab-general">General</button>
+        <button type="button" class="tab-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-900" data-target="#tab-appearances">Appearances</button>
+        <button type="button" class="tab-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-900" data-target="#tab-reset">Reset Plugin</button>
+        <button type="button" class="tab-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-900" data-target="#tab-demo">Demo Data</button>
     </div>
 
     <!-- Main Settings Form -->
@@ -18,95 +18,96 @@
         
         <!-- Tab: General -->
         <div id="tab-general" class="tab-content block">
-            <div class="bg-card rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+                <div class="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                    <h3 class="text-sm font-bold text-heading">General Configuration</h3>
+                </div>
                 <div class="p-6 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                        <label class="text-sm font-bold text-heading">Set Active Session:</label>
-                        <div class="col-span-2">
-                            @php
-                                $sessions = \App\Models\AcademicSession::all();
-                                $currentSessionId = \App\Models\SystemSetting::getSetting('current_session_id');
-                            @endphp
-                            <select name="current_session_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
-                                <option value="">-- Select Current Session --</option>
-                                @foreach($sessions as $session)
-                                    <option value="{{ $session->id }}" {{ $currentSessionId == $session->id ? 'selected' : '' }}>
-                                        {{ $session->name }} ({{ ucfirst($session->status) }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-bold text-heading mb-2">Set Active Session</label>
+                        @php
+                            $sessions = \App\Models\AcademicSession::all();
+                            $currentSessionId = \App\Models\SystemSetting::getSetting('current_session_id');
+                        @endphp
+                        <select name="current_session_id" class="block w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-navy focus:border-navy text-sm">
+                            <option value="">-- Select Current Session --</option>
+                            @foreach($sessions as $session)
+                                <option value="{{ $session->id }}" {{ $currentSessionId == $session->id ? 'selected' : '' }}>
+                                    {{ $session->name }} ({{ ucfirst($session->status) }})
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                        <label class="text-sm font-bold text-heading">Set Date Format:</label>
-                        <div class="col-span-2">
-                            @php $dateFormat = \App\Models\SystemSetting::getSetting('date_format', 'Y-m-d'); @endphp
-                            <select name="date_format" class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
-                                <option value="d-m-Y" {{ $dateFormat === 'd-m-Y' ? 'selected' : '' }}>dd-mm-yyyy</option>
-                                <option value="m-d-Y" {{ $dateFormat === 'm-d-Y' ? 'selected' : '' }}>mm-dd-yyyy</option>
-                                <option value="Y-m-d" {{ $dateFormat === 'Y-m-d' ? 'selected' : '' }}>yyyy-mm-dd</option>
-                                <option value="d/m/Y" {{ $dateFormat === 'd/m/Y' ? 'selected' : '' }}>dd/mm/yyyy</option>
-                                <option value="m/d/Y" {{ $dateFormat === 'm/d/Y' ? 'selected' : '' }}>mm/dd/yyyy</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-bold text-heading mb-2">Set Date Format</label>
+                        @php $dateFormat = \App\Models\SystemSetting::getSetting('date_format', 'Y-m-d'); @endphp
+                        <select name="date_format" class="block w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-navy focus:border-navy text-sm">
+                            <option value="d-m-Y" {{ $dateFormat === 'd-m-Y' ? 'selected' : '' }}>dd-mm-yyyy</option>
+                            <option value="m-d-Y" {{ $dateFormat === 'm-d-Y' ? 'selected' : '' }}>mm-dd-yyyy</option>
+                            <option value="Y-m-d" {{ $dateFormat === 'Y-m-d' ? 'selected' : '' }}>yyyy-mm-dd</option>
+                            <option value="d/m/Y" {{ $dateFormat === 'd/m/Y' ? 'selected' : '' }}>dd/mm/yyyy</option>
+                            <option value="m/d/Y" {{ $dateFormat === 'm/d/Y' ? 'selected' : '' }}>mm/dd/yyyy</option>
+                        </select>
                     </div>
 
-
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                        <label class="text-sm font-bold text-heading mt-1">Menu Visibility:</label>
-                        <div class="col-span-2 space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-heading mb-3">Menu Visibility</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                             @php 
                                 $showLib = \App\Models\SystemSetting::getSetting('show_library_menu', '1') == '1'; 
                                 $showExam = \App\Models\SystemSetting::getSetting('show_examination_menu', '1') == '1';
                                 $showTrans = \App\Models\SystemSetting::getSetting('show_transport_menu', '1') == '1';
                                 $showAcc = \App\Models\SystemSetting::getSetting('show_accounting_menu', '1') == '1';
                             @endphp
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="show_library_menu" value="1" {{ $showLib ? 'checked' : '' }} class="rounded text-primary focus:ring-primary h-4 w-4">
-                                <span class="text-sm text-gray-700">Library Menu show</span>
+                            <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" name="show_library_menu" value="1" {{ $showLib ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
+                                <span class="text-sm font-semibold text-gray-700">Library Menu</span>
                             </label>
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="show_examination_menu" value="1" {{ $showExam ? 'checked' : '' }} class="rounded text-primary focus:ring-primary h-4 w-4">
-                                <span class="text-sm text-gray-700">Examination Menu show</span>
+                            <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" name="show_examination_menu" value="1" {{ $showExam ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
+                                <span class="text-sm font-semibold text-gray-700">Examination Menu</span>
                             </label>
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="show_transport_menu" value="1" {{ $showTrans ? 'checked' : '' }} class="rounded text-primary focus:ring-primary h-4 w-4">
-                                <span class="text-sm text-gray-700">Transport Menu show</span>
+                            <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" name="show_transport_menu" value="1" {{ $showTrans ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
+                                <span class="text-sm font-semibold text-gray-700">Transport Menu</span>
                             </label>
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="show_accounting_menu" value="1" {{ $showAcc ? 'checked' : '' }} class="rounded text-primary focus:ring-primary h-4 w-4">
-                                <span class="text-sm text-gray-700">Accounting Menu show</span>
+                            <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" name="show_accounting_menu" value="1" {{ $showAcc ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
+                                <span class="text-sm font-semibold text-gray-700">Accounting Menu</span>
                             </label>
                         </div>
                     </div>
+                </div>
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+                    <button type="submit" class="inline-flex items-center gap-2 bg-navy hover:bg-primary-dark text-white text-sm font-bold py-2 px-6 rounded-lg transition-colors shadow-sm">
+                        <i data-lucide="save" class="w-4 h-4"></i> Save Settings
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Tab: Appearances -->
         <div id="tab-appearances" class="tab-content hidden">
-            <div class="bg-card rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+                <div class="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                    <h3 class="text-sm font-bold text-heading">Appearance Settings</h3>
+                </div>
                 <div class="p-6 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                        <label class="text-sm font-bold text-heading">Project Theme Color:</label>
-                        <div class="col-span-2 flex items-center gap-3">
-                            <input type="color" name="theme_color" value="{{ \App\Models\SystemSetting::getSetting('theme_color', '#B47A42') }}" class="h-10 w-20 p-1 border border-gray-300 rounded cursor-pointer">
-                            <span class="text-sm text-gray-500">Select the main primary color for the system.</span>
+                    <div>
+                        <label class="block text-sm font-bold text-heading mb-2">Project Theme Color</label>
+                        <div class="flex items-center gap-4">
+                            <input type="color" name="theme_color" value="{{ \App\Models\SystemSetting::getSetting('theme_color', '#B47A42') }}" class="h-12 w-24 p-1 border border-gray-300 rounded-md cursor-pointer shadow-sm">
+                            <span class="text-sm text-gray-500 max-w-sm">Select the main primary color for the system. This affects buttons, links, and highlights.</span>
                         </div>
                     </div>
                 </div>
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+                    <button type="submit" class="inline-flex items-center gap-2 bg-navy hover:bg-primary-dark text-white text-sm font-bold py-2 px-6 rounded-lg transition-colors shadow-sm">
+                        <i data-lucide="save" class="w-4 h-4"></i> Save Settings
+                    </button>
+                </div>
             </div>
-        </div>
-
-
-
-        <!-- Form Save Button (Fixed at bottom or floating) -->
-        <div class="flex justify-end pt-4 mb-8">
-            <button type="submit" class="px-6 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white transition-colors" style="background:var(--color-primary);">
-                Save Settings
-            </button>
         </div>
     </form>
 
@@ -181,19 +182,23 @@
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => {
-                    t.classList.remove('border-primary', 'text-primary');
-                    t.classList.add('border-transparent', 'text-gray-500');
+                    t.classList.remove('bg-navy', 'text-white', 'shadow-sm');
+                    t.classList.add('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
                 });
                 
-                contents.forEach(c => c.classList.add('hidden'));
-                contents.forEach(c => c.classList.remove('block'));
+                contents.forEach(c => {
+                    c.classList.add('hidden');
+                    c.classList.remove('block');
+                });
                 
-                tab.classList.add('border-primary', 'text-primary');
-                tab.classList.remove('border-transparent', 'text-gray-500');
+                tab.classList.add('bg-navy', 'text-white', 'shadow-sm');
+                tab.classList.remove('text-gray-500', 'hover:bg-gray-100', 'hover:text-gray-900');
                 
                 const target = document.querySelector(tab.dataset.target);
-                target.classList.remove('hidden');
-                target.classList.add('block');
+                if(target) {
+                    target.classList.remove('hidden');
+                    target.classList.add('block');
+                }
             });
         });
     });

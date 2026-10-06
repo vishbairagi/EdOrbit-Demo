@@ -110,3 +110,5 @@ according to tempplate use kr lena then email subject then email body then save 
 email jana chaiye be kayda
 
 
+ab muje website panel name ka menu bnana h esme esme 
+jisme submenu : navbar header menu , footer menu , contect details ,  

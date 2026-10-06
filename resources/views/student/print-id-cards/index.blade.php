@@ -99,10 +99,10 @@
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-4 py-3"><input type="checkbox" class="student-cb rounded accent-navy" value="{{ $member->id }}"></td>
                             <td class="px-4 py-3 font-bold text-heading">{{ $member->name }}</td>
-                            <td class="px-4 py-3 text-body">{{ $member->employee_id ?? '—' }}</td>
-                            <td class="px-4 py-3 text-body">{{ $member->role?->name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-body">{{ $member->designation ?? '—' }}</td>
-                            <td class="px-4 py-3 text-body">{{ $member->phone ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $member->employee_id ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $member->role?->name ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $member->designation ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $member->phone ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 <a href="{{ route('sm-student.print-id-cards.staff.print', $member) }}"
                                    onclick="return printCards(this.href)"
@@ -142,7 +142,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-body">Admission Number</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-body">Class</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-body">Section</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-body">Roll Number</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-body">Enrollment Number</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-body">Father's Name</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-body">Phone</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-body">Action</th>
@@ -155,12 +155,12 @@
                                 <input type="checkbox" class="student-cb rounded accent-navy" value="{{ $student->id }}">
                             </td>
                             <td class="px-4 py-3 font-bold text-heading">{{ $student->full_name }}</td>
-                            <td class="px-4 py-3 text-body">{{ $student->admission_no }}</td>
-                            <td class="px-4 py-3 text-body">{{ $student->schoolClass?->name }}</td>
-                            <td class="px-4 py-3 text-body">{{ $student->section?->name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-body">{{ $student->roll_number ?? '—' }}</td>
-                            <td class="px-4 py-3 text-body">{{ $student->father_name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-body">{{ $student->phone ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $student->admission_no }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $student->schoolClass?->name }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $student->section?->name ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $student->roll_number ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $student->father_name ?? '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-heading">{{ $student->phone ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 <a href="{{ route('sm-student.print-id-cards.print', $student) }}"
                                    onclick="return printCards(this.href)"

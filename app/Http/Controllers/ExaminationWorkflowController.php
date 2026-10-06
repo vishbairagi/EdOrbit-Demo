@@ -140,6 +140,26 @@ class ExaminationWorkflowController extends Controller
             ->with('success', count($cards) . ' admit card(s) deleted successfully.');
     }
 
+    public function bulkDestroyAdmitCardsByExam(Request $request): RedirectResponse
+    {
+        [$school, $session] = $this->schoolContext();
+        $request->validate(['ids' => 'required|array']);
+        
+        $exams = Exam::whereIn('id', $request->ids)
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->get();
+            
+        $totalDeleted = 0;
+        foreach ($exams as $exam) {
+            $deleted = $exam->admitCards()->delete();
+            $totalDeleted += $deleted;
+        }
+
+        return redirect()->route('examination.admit-cards.index')
+            ->with('success', "{$totalDeleted} admit card(s) deleted across selected exams.");
+    }
+
     public function updateAdmitCard(Request $request, Exam $exam, ExamAdmitCard $admitCard): RedirectResponse
     {
         $this->assertExamScope($exam);
@@ -326,6 +346,30 @@ class ExaminationWorkflowController extends Controller
 
         return redirect()->route('examination.results.view', $exam)
             ->with('success', count($results) . ' result(s) deleted successfully.');
+    }
+
+    public function bulkDestroyResultsByExam(Request $request): RedirectResponse
+    {
+        [$school, $session] = $this->schoolContext();
+        $request->validate(['ids' => 'required|array']);
+        
+        $exams = Exam::whereIn('id', $request->ids)
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->get();
+            
+        $totalDeleted = 0;
+        foreach ($exams as $exam) {
+            $results = $exam->results()->get();
+            foreach ($results as $result) {
+                $result->items()->delete();
+                $result->delete();
+                $totalDeleted++;
+            }
+        }
+
+        return redirect()->route('examination.results.index')
+            ->with('success', "{$totalDeleted} result(s) deleted across selected exams.");
     }
 
     public function academicReport(Request $request): View

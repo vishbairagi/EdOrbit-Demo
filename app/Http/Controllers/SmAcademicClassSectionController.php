@@ -88,6 +88,41 @@ class SmAcademicClassSectionController extends Controller
         return redirect()->route('academic.class-sections.index')->with('success', 'Section deleted.');
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        [$school] = $this->getSchoolAndSession();
+        
+        $classIds = $request->input('class_ids', []);
+        $sectionIds = $request->input('section_ids', []);
+
+        if (empty($classIds) && empty($sectionIds)) {
+            return redirect()->route('academic.class-sections.index')->with('error', 'No items selected for deletion.');
+        }
+
+        $deletedClasses = 0;
+        $deletedSections = 0;
+
+        if (!empty($classIds)) {
+            $deletedClasses = SchoolClass::whereIn('id', $classIds)
+                ->where('school_id', $school->id)
+                ->delete();
+        }
+
+        if (!empty($sectionIds)) {
+            $deletedSections = Section::whereIn('id', $sectionIds)
+                ->whereHas('schoolClass', function ($q) use ($school) {
+                    $q->where('school_id', $school->id);
+                })->delete();
+        }
+
+        $message = [];
+        if ($deletedClasses > 0) $message[] = "{$deletedClasses} class(es) deleted.";
+        if ($deletedSections > 0) $message[] = "{$deletedSections} section(s) deleted.";
+
+        return redirect()->route('academic.class-sections.index')
+            ->with('success', implode(' ', $message));
+    }
+
     /** Export class sections as CSV */
     public function export(): StreamedResponse
     {

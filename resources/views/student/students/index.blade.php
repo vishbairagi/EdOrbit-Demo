@@ -165,7 +165,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-body">Student Name</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-body">Class</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-body">Section</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-body">Exam Roll No</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-body">Enrollment Number</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-body">Admission No</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-body">Status</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-body">Action</th>
@@ -179,14 +179,14 @@
                                    class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
                         </td>
                         <td class="px-4 py-3">
-                            <a href="{{ route('sm-student.students.edit', $student) }}" class="font-bold text-navy hover:underline">
+                            <a href="{{ route('sm-student.students.edit', $student) }}" class="font-bold text-black hover:underline">
                                 {{ $student->full_name }}
                             </a>
                         </td>
-                        <td class="px-4 py-3 text-body text-xs font-bold">{{ $student->schoolClass?->name ?? '---' }}</td>
-                        <td class="px-4 py-3 text-body text-xs font-bold">{{ $student->section?->name ?? '---' }}</td>
-                        <td class="px-4 py-3 text-body text-xs font-mono font-bold">{{ $student->roll_number ?? '---' }}</td>
-                        <td class="px-4 py-3 text-body text-xs font-mono font-bold">{{ $student->admission_no }}</td>
+                        <td class="px-4 py-3 text-heading text-xs font-bold">{{ $student->schoolClass?->name ?? '---' }}</td>
+                        <td class="px-4 py-3 text-heading text-xs font-bold">{{ $student->section?->name ?? '---' }}</td>
+                        <td class="px-4 py-3 text-heading text-xs font-mono font-bold">{{ $student->roll_number ?? '---' }}</td>
+                        <td class="px-4 py-3 text-heading text-xs font-mono font-bold">{{ $student->admission_no }}</td>
                         <td class="px-4 py-3">
                             @php
                                 $statusColors = [

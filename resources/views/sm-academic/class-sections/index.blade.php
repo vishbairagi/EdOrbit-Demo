@@ -81,10 +81,25 @@
     </div>
 @else
     {{-- Table --}}
+    {{-- ══ Bulk Delete Toolbar ══ --}}
+    <div id="bulkToolbar" class="hidden mb-3 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 animate-pulse-once">
+        <span id="selectedCount" class="text-sm font-semibold text-red-700">0 selected</span>
+        <form id="bulkDeleteForm" method="POST" action="{{ route('academic.class-sections.bulk-destroy') }}" onsubmit="return confirmBulkDelete(event)">
+            @csrf
+            <div id="bulkIdsContainer"></div>
+            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Selected
+            </button>
+        </form>
+        <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 underline">Clear</button>
+    </div>
     <div class="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <table class="w-full text-sm">
             <thead>
                 <tr class="bg-navy">
+                    <th class="px-4 py-3 w-10 text-center">
+                        <input type="checkbox" id="selectAllClasses" class="rounded border-gray-300 text-navy focus:ring-navy cursor-pointer" onclick="toggleAllClasses(this)">
+                    </th>
                     <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Class</th>
                     <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Number of Sections</th>
                     <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Total Students</th>
@@ -94,6 +109,9 @@
             <tbody class="divide-y divide-gray-100">
                 @foreach($classes as $class)
                     <tr class="hover:bg-gray-50 transition-colors" id="class-row-{{ $class->id }}">
+                        <td class="px-4 py-3 text-center">
+                            <input type="checkbox" value="{{ $class->id }}" class="class-checkbox rounded border-gray-300 text-navy focus:ring-navy cursor-pointer" onchange="updateBulkDeleteButton()">
+                        </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <button onclick="toggleSections({{ $class->id }})"
@@ -135,13 +153,14 @@
                     </tr>
                     {{-- Expandable Sections Row --}}
                     <tr id="sections-{{ $class->id }}" class="hidden">
-                        <td colspan="4" class="px-6 py-3 bg-gray-50">
+                        <td colspan="5" class="px-6 py-3 bg-gray-50">
                             @if($class->sections->isEmpty())
                                 <p class="text-xs text-gray-400 italic">No sections yet. Add one above.</p>
                             @else
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($class->sections as $section)
                                         <div class="flex items-center gap-1.5 bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs">
+                                            <input type="checkbox" value="{{ $section->id }}" class="section-checkbox rounded border-gray-300 text-navy focus:ring-navy cursor-pointer" onchange="updateBulkDeleteButton()">
                                             <span class="font-medium text-heading">{{ $section->name }}</span>
                                             @if($section->capacity)
                                                 <span class="text-gray-400">(cap: {{ $section->capacity }})</span>
@@ -204,6 +223,55 @@
 </div>
 
 <script>
+    function toggleAllClasses(source) {
+        document.querySelectorAll('.class-checkbox').forEach(cb => cb.checked = source.checked);
+        document.querySelectorAll('.section-checkbox').forEach(cb => cb.checked = source.checked);
+        updateBulkDeleteButton();
+    }
+
+    function updateBulkDeleteButton() {
+        const checkedClasses = document.querySelectorAll('.class-checkbox:checked').length;
+        const checkedSections = document.querySelectorAll('.section-checkbox:checked').length;
+        const total = checkedClasses + checkedSections;
+        const toolbar = document.getElementById('bulkToolbar');
+        const countEl = document.getElementById('selectedCount');
+        
+        if (total > 0) {
+            toolbar.classList.remove('hidden');
+            if(countEl) countEl.textContent = total + ' selected';
+        } else {
+            toolbar.classList.add('hidden');
+        }
+    }
+    
+    function clearSelection() {
+        document.querySelectorAll('.class-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.section-checkbox').forEach(cb => cb.checked = false);
+        const sa = document.getElementById('selectAllClasses');
+        if (sa) sa.checked = false;
+        updateBulkDeleteButton();
+    }
+
+    function confirmBulkDelete(e) {
+        if (!confirm('Are you sure you want to delete the selected items?')) {
+            e.preventDefault();
+            return false;
+        }
+        
+        const container = document.getElementById('bulkIdsContainer');
+        container.innerHTML = '';
+        
+        document.querySelectorAll('.class-checkbox:checked').forEach(cb => {
+            container.insertAdjacentHTML('beforeend', `<input type="hidden" name="class_ids[]" value="${cb.value}">`);
+        });
+        
+        document.querySelectorAll('.section-checkbox:checked').forEach(cb => {
+            container.insertAdjacentHTML('beforeend', `<input type="hidden" name="section_ids[]" value="${cb.value}">`);
+        });
+        
+        return true;
+    }
+
     function toggleSections(classId) {
         const row = document.getElementById('sections-' + classId);
         const icon = document.getElementById('toggle-icon-' + classId);

@@ -96,6 +96,30 @@ class AssignSubjectController extends Controller
         return redirect()->route('academic.assign-subjects.teachers', $subject)->with('success', 'Teacher removed successfully.');
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        [$school] = $this->getSchoolAndSession();
+        
+        $subjectIds = $request->input('ids', []);
+        
+        if (empty($subjectIds)) {
+            return redirect()->route('academic.assign-subjects.index')->with('error', 'No subjects selected.');
+        }
+
+        $subjects = Subject::whereIn('id', $subjectIds)
+            ->where('school_id', $school->id)
+            ->get();
+            
+        $count = 0;
+        foreach ($subjects as $subject) {
+            $subject->teachers()->detach();
+            $count++;
+        }
+
+        return redirect()->route('academic.assign-subjects.index')
+            ->with('success', "Teachers unassigned from {$count} subject(s).");
+    }
+
     public function export()
     {
         [$school, $session] = $this->getSchoolAndSession();
