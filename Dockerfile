@@ -29,6 +29,15 @@ RUN cp .env.example .env 2>/dev/null || true
 # Install Composer dependencies (production only)
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
+# Ensure all storage directories exist and are writable
+RUN mkdir -p \
+    storage/framework/views \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/logs \
+    bootstrap/cache \
+    database
+
 # Set writable permissions for storage, cache, and database
 RUN chmod -R 777 storage bootstrap/cache database
 
@@ -36,6 +45,7 @@ RUN chmod -R 777 storage bootstrap/cache database
 ENV PORT=8000
 EXPOSE 8000
 
-# Start server
-CMD php artisan serve --host=0.0.0.0 --port=$PORT
+# Start server (ensuring directories exist at runtime)
+CMD sh -c "mkdir -p storage/framework/views storage/framework/cache/data storage/framework/sessions storage/logs bootstrap/cache && chmod -R 777 storage bootstrap/cache database && php artisan serve --host=0.0.0.0 --port=$PORT"
+
 
