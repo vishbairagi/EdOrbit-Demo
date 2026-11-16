@@ -3,7 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>{{ config('app.name', 'EdOrbit') }} - School Management</title>
+    
+    <!-- Tailwind CSS (Universal CDN Fallback) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#B47A42',
+                        cream: '#F5F1EB',
+                        card: '#FFFCF7',
+                        beige: '#EDE5DC',
+                        border: '#DED5CB',
+                        heading: '#211B17',
+                        body: '#766C63',
+                    }
+                }
+            }
+        }
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://unpkg.com/lucide@latest"></script>
     @php
