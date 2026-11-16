@@ -119,14 +119,10 @@
 
 {{-- Page Toolbar --}}
 <div class="mb-3 flex justify-between items-center flex-wrap gap-2">
-    <h3 class="text-lg font-bold text-heading flex items-center gap-2">
-        Class Groups
-        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-              style="background:#e8f0f8; color:#1a4a6e;">
-            <i data-lucide="calendar" class="w-3 h-3"></i>
-            {{ $session->name }}
-        </span>
-    </h3>
+    <div>
+        <h3 class="text-lg font-bold text-heading">Class Groups</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Session: {{ $session->name }} &nbsp;·&nbsp; Total Groups: {{ $classGroups->total() }}</p>
+    </div>
     <div class="flex items-center gap-2">
         <a href="{{ route('sm-school.class-groups.export') }}"
            class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors">
@@ -156,33 +152,66 @@
     </form>
     <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 underline">Clear</button>
 </div>
+
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    {{-- ══ Bulk Delete Toolbar (auto-injected) ══ --}}
-<div id="bulkToolbar" class="hidden mb-3 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 animate-pulse-once">
-    <span id="selectedCount" class="text-sm font-semibold text-red-700">0 selected</span>
-    <form id="bulkDeleteForm" method="POST" action="{{ route('sm-school.class-groups.bulk-destroy') }}" onsubmit="return confirmBulkDelete()">
-        @csrf
-        <div id="bulkIdsContainer"></div>
-        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Selected
-        </button>
-    </form>
-    <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 underline">Clear</button>
-</div>
-<div class="overflow-x-auto">
-        {{-- ══ Bulk Delete Toolbar (auto-injected) ══ --}}
-<div id="bulkToolbar" class="hidden mb-3 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 animate-pulse-once">
-    <span id="selectedCount" class="text-sm font-semibold text-red-700">0 selected</span>
-    <form id="bulkDeleteForm" method="POST" action="{{ route('sm-school.class-groups.bulk-destroy') }}" onsubmit="return confirmBulkDelete()">
-        @csrf
-        <div id="bulkIdsContainer"></div>
-        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Selected
-        </button>
-    </form>
-    <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 underline">Clear</button>
-</div>
-<table class="min-w-full divide-y divide-gray-200">
+    {{-- Search & Filter Toolbar --}}
+    <div class="px-4 py-3 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-3 bg-white">
+        <form method="GET" action="{{ route('sm-school.class-groups.index') }}" class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div class="relative flex-1 sm:w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <i data-lucide="search" class="w-4 h-4"></i>
+                </div>
+                <input type="text" id="groupSearchInput" name="search" value="{{ request('search') }}"
+                       autocomplete="off"
+                       class="block w-full pl-9 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-heading placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy"
+                       placeholder="Search class groups...">
+                @if(request('search'))
+                    <a href="{{ route('sm-school.class-groups.index', request()->except('search', 'page')) }}"
+                       class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-red-500" title="Clear search">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </a>
+                @endif
+            </div>
+
+            <select name="status" onchange="this.form.submit()"
+                    class="py-1.5 px-3 border border-gray-300 bg-white rounded-lg text-sm text-heading focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy cursor-pointer">
+                <option value="">All Status</option>
+                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+            </select>
+
+            <select name="per_page" onchange="this.form.submit()"
+                    class="py-1.5 px-3 border border-gray-300 bg-white rounded-lg text-sm text-heading focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy cursor-pointer"
+                    title="Entries per page">
+                <option value="2" {{ request('per_page') == 2 ? 'selected' : '' }}>2 / page</option>
+                <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 / page</option>
+                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10 / page</option>
+                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25 / page</option>
+                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 / page</option>
+            </select>
+
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy hover:bg-primary-dark text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                Search
+            </button>
+
+            @if(request()->filled('search') || request()->filled('status') || (request()->filled('per_page') && request('per_page') != 10))
+                <a href="{{ route('sm-school.class-groups.index') }}"
+                   class="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-xs font-semibold rounded-lg text-red-600 bg-white hover:bg-red-50 transition-colors">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Reset
+                </a>
+            @endif
+        </form>
+
+        <div class="text-xs text-gray-500 whitespace-nowrap self-end md:self-center">
+            Total Groups: {{ $classGroups->total() }}
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
             <thead>
                 <tr class="bg-navy">
                     <th class="px-4 py-2 w-10 text-center">
@@ -197,7 +226,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-100">
                 @forelse($classGroups as $group)
-                    <tr class="hover:bg-gray-50 transition-colors" data-id="{{ $group->id }}">
+                    <tr class="hover:bg-gray-50 transition-colors group-row" data-id="{{ $group->id }}" data-name="{{ strtolower($group->name) }}" data-desc="{{ strtolower($group->description ?? '') }}">
                         <td class="px-4 py-2 text-center w-10">
                             <input type="checkbox" value="{{ $group->id }}" onchange="updateBulkToolbar()"
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
@@ -233,14 +262,38 @@
                     <tr>
                         <td colspan="100%" class="px-6 py-12 text-center">
                             <i data-lucide="layers" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
-                            <p class="font-medium text-heading">No class groups yet for {{ $session->name }}.</p>
-                            <p class="text-sm text-body mt-1">Add your first group or import from CSV.</p>
+                            @if(request()->filled('search') || request()->filled('status'))
+                                <p class="font-medium text-heading">No class groups found matching your search.</p>
+                                <p class="text-sm text-body mt-1">Try adjusting your keywords or filters.</p>
+                                <a href="{{ route('sm-school.class-groups.index') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-red-600 bg-white hover:bg-red-50">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Clear Search Filters
+                                </a>
+                            @else
+                                <p class="font-medium text-heading">No class groups yet for {{ $session->name }}.</p>
+                                <p class="text-sm text-body mt-1">Add your first group or import from CSV.</p>
+                            @endif
                         </td>
                     </tr>
                 @endforelse
+                <tr id="clientEmptyRow" style="display:none;">
+                    <td colspan="100%" class="px-6 py-8 text-center text-sm text-body">
+                        No matching groups on this page. Press <strong>Search</strong> or hit Enter to search all pages.
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
+
+    @if($classGroups->hasPages())
+        <div class="px-4 py-3 border-t border-gray-200 bg-white">
+            {{ $classGroups->links() }}
+        </div>
+    @else
+        <div class="px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <span>Showing <strong class="text-gray-700 font-semibold">{{ $classGroups->count() }}</strong> of <strong class="text-gray-700 font-semibold">{{ $classGroups->total() }}</strong> {{ Str::plural('group', $classGroups->total()) }}</span>
+            <span class="text-gray-400">Page 1 of 1</span>
+        </div>
+    @endif
 </div>
 
 <script>
@@ -283,6 +336,27 @@
     document.getElementById('importGroupModal').addEventListener('click', function(e) {
         if (e.target === this) this.classList.add('hidden');
     });
+
+    // Real-time client-side search while typing
+    const searchInput = document.getElementById('groupSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            const rows = document.querySelectorAll('.group-row');
+            let visibleCount = 0;
+            rows.forEach(function(row) {
+                const name = row.getAttribute('data-name') || '';
+                const desc = row.getAttribute('data-desc') || '';
+                const match = !query || name.includes(query) || desc.includes(query);
+                row.style.display = match ? '' : 'none';
+                if (match) visibleCount++;
+            });
+            const clientEmpty = document.getElementById('clientEmptyRow');
+            if (clientEmpty) {
+                clientEmpty.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+        });
+    }
 </script>
 
     {{-- ══ Bulk Select JS (auto-injected) ══ --}}

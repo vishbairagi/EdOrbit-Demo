@@ -38,27 +38,112 @@ class StudentController extends Controller
     }
 
     /** SM Student Dashboard */
-    public function dashboard(): View
+    public function dashboard(Request $request): View
     {
         $school = $this->currentSchool();
-        $session = $this->currentSession();
 
-        $query = $school
-            ? Student::where('school_id', $school->id)
-            : Student::query();
-
-        if ($session) {
-            $query->where('academic_session_id', $session->id);
+        if ($request->filled('session_id')) {
+            session([
+                'selected_session_id' => $request->session_id,
+                'selected_academic_session_id' => $request->session_id,
+            ]);
         }
 
-        $totalStudents = (clone $query)->count();
-        $totalGirls = (clone $query)->where('gender', 'Female')->count();
-        $totalBoys = (clone $query)->where('gender', 'Male')->count();
-        $promoted = (clone $query)->where('status', 'Promoted')->count();
-        $transferred = (clone $query)->where('status', 'Transferred')->count();
+        $session = $this->currentSession();
+        $sessions = AcademicSession::orderBy('start_date', 'desc')->get();
+        $globalCurrentSessionId = SystemSetting::getSetting('current_session_id');
+        $globalCurrentSession = AcademicSession::find($globalCurrentSessionId);
+
+        $query = Student::with(['schoolClass', 'section', 'studentType', 'medium'])
+            ->when($school, fn ($q) => $q->where('school_id', $school->id))
+            ->when($session, fn ($q) => $q->where('academic_session_id', $session->id));
+
+        $students = $query->get();
+
+        $totalStudents = $students->count();
+        $totalGirls = $students->filter(fn ($s) => strtolower((string) $s->gender) === 'female')->count();
+        $totalBoys = $students->filter(fn ($s) => strtolower((string) $s->gender) === 'male')->count();
+        $otherGender = max(0, $totalStudents - $totalBoys - $totalGirls);
+        $boysPercentage = $totalStudents > 0 ? round(($totalBoys / $totalStudents) * 100, 1) : 0;
+        $girlsPercentage = $totalStudents > 0 ? round(($totalGirls / $totalStudents) * 100, 1) : 0;
+
+        $activeStudentsCount = $students->filter(fn ($s) => strtolower((string) $s->status) === 'active' || $s->status == '1')->count();
+        $inactiveStudentsCount = $students->filter(fn ($s) => in_array(strtolower((string) $s->status), ['inactive', 'disabled', '0']))->count();
+        $promotedCount = $students->filter(fn ($s) => strtolower((string) $s->status) === 'promoted')->count();
+        $transferredCount = $students->filter(fn ($s) => strtolower((string) $s->status) === 'transferred')->count();
+        $activePercentage = $totalStudents > 0 ? round(($activeStudentsCount / $totalStudents) * 100, 1) : 0;
+
+        // Class-wise student distribution
+        $palette = ['#B47A42', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#F59E0B', '#06B6D4', '#6366F1', '#14B8A6'];
+        $classGrouped = $students->groupBy(fn ($s) => $s->schoolClass?->name ?: 'Unassigned');
+        $classStudentsData = [];
+        $cIdx = 0;
+        foreach ($classGrouped as $className => $items) {
+            $cnt = $items->count();
+            $pct = $totalStudents > 0 ? round(($cnt / $totalStudents) * 100, 1) : 0;
+            $classStudentsData[] = [
+                'name' => $className,
+                'count' => $cnt,
+                'percentage' => $pct,
+                'color' => $palette[$cIdx % count($palette)],
+            ];
+            $cIdx++;
+        }
+        $classCount = count($classStudentsData);
+
+        // Section-wise student distribution
+        $secPalette = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4'];
+        $sectionGrouped = $students->groupBy(fn ($s) => $s->section?->name ? 'Section ' . $s->section->name : 'No Section');
+        $sectionStudentsData = [];
+        $sIdx = 0;
+        foreach ($sectionGrouped as $secName => $items) {
+            $cnt = $items->count();
+            $pct = $totalStudents > 0 ? round(($cnt / $totalStudents) * 100, 1) : 0;
+            $sectionStudentsData[] = [
+                'name' => $secName,
+                'count' => $cnt,
+                'percentage' => $pct,
+                'color' => $secPalette[$sIdx % count($secPalette)],
+            ];
+            $sIdx++;
+        }
+        $sectionCount = count($sectionStudentsData);
+
+        // Student Portal Logins
+        $studentIds = $students->pluck('id')->toArray();
+        $portalUsersCount = DB::table('users')
+            ->whereIn('student_id', $studentIds)
+            ->count();
+        $pendingLoginsCount = max(0, $totalStudents - $portalUsersCount);
+        $loginCoverageRate = $totalStudents > 0 ? round(($portalUsersCount / $totalStudents) * 100, 1) : 0;
+
+        $recentStudents = $students->sortByDesc('id')->take(8);
 
         return view('student.dashboard', compact(
-            'school', 'session', 'totalStudents', 'totalGirls', 'totalBoys', 'promoted', 'transferred'
+            'school',
+            'session',
+            'sessions',
+            'globalCurrentSession',
+            'students',
+            'recentStudents',
+            'totalStudents',
+            'totalGirls',
+            'totalBoys',
+            'otherGender',
+            'boysPercentage',
+            'girlsPercentage',
+            'activeStudentsCount',
+            'inactiveStudentsCount',
+            'promotedCount',
+            'transferredCount',
+            'activePercentage',
+            'classStudentsData',
+            'classCount',
+            'sectionStudentsData',
+            'sectionCount',
+            'portalUsersCount',
+            'pendingLoginsCount',
+            'loginCoverageRate'
         ));
     }
 
@@ -352,10 +437,11 @@ class StudentController extends Controller
     /** Delete student */
     public function destroy(Student $student): RedirectResponse
     {
-        $student->delete();
+        $name = $student->full_name;
+        \App\Models\StudentTrash::moveToTrash($student);
 
         return redirect()->route('sm-student.students.index')
-            ->with('success', 'Student deleted successfully.');
+            ->with('success', "Student {$name} and all associated records moved to Trash (retained for 30 days).");
     }
 
     /** AJAX: Get sections for a class */
@@ -580,19 +666,28 @@ class StudentController extends Controller
                 $admissionNo = Student::generateAdmissionNo($school?->id ?? 0);
             }
 
+            $parsedDob = null;
+            if (!empty($dob)) {
+                try {
+                    $parsedDob = \Carbon\Carbon::parse($dob)->format('Y-m-d');
+                } catch (\Throwable $e) {
+                    $parsedDob = null;
+                }
+            }
+
             Student::updateOrCreate([
                 'school_id' => $school?->id,
                 'academic_session_id' => $session?->id,
                 'admission_no' => $admissionNo,
             ], [
-                'roll_number' => $rollNumber,
+                'roll_number' => $rollNumber !== '' ? $rollNumber : null,
                 'first_name' => $firstName,
                 'middle_name' => $middleName,
                 'last_name' => $lastName,
                 'school_class_id' => $classId,
                 'section_id' => $sectionId,
                 'gender' => in_array($gender, ['Male', 'Female', 'Other']) ? $gender : 'Male',
-                'date_of_birth' => $dob ?: null,
+                'date_of_birth' => $parsedDob,
                 'religion' => $religion,
                 'caste' => $caste,
                 'blood_group' => $bloodGroup,
@@ -634,7 +729,12 @@ class StudentController extends Controller
         if (empty($ids)) {
             return back()->with('error', 'No items selected.');
         }
-        $deleted = \App\Models\Student::whereIn('id', $ids)->delete();
-        return back()->with('success', "$deleted record(s) deleted successfully.");
+        $students = \App\Models\Student::whereIn('id', $ids)->get();
+        $count = 0;
+        foreach ($students as $student) {
+            \App\Models\StudentTrash::moveToTrash($student);
+            $count++;
+        }
+        return back()->with('success', "{$count} student(s) and all associated records moved to Trash (retained for 30 days).");
     }
 }

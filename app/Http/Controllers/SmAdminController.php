@@ -15,7 +15,7 @@ class SmAdminController extends Controller
 {
     private array $allPermissions = [
         'School Management' => ['sm-school.dashboard', 'sm-school.class-groups', 'sm-school.classes'],
-        'Academic' => ['academic.dashboard', 'academic.class-sections', 'academic.mediums', 'academic.subjects', 'academic.subject-types', 'academic.study-materials'],
+        'Academic' => ['academic.dashboard', 'academic.class-sections', 'academic.mediums', 'academic.subjects', 'academic.subject-types', 'academic.study-materials', 'academic.noticeboards'],
         'Student' => ['sm-student.dashboard', 'sm-student.students', 'sm-student.print-id-cards', 'sm-student.promote', 'sm-student.transfer'],
         'Administrator' => ['sm-administrator.dashboard', 'sm-administrator.admins', 'sm-administrator.roles', 'sm-administrator.staff', 'sm-administrator.attendance', 'sm-administrator.leaves', 'sm-administrator.id-cards', 'sm-administrator.payroll', 'sm-administrator.users'],
         'Accounting' => ['accounting.dashboard', 'accounting.fee-types', 'accounting.fee-invoices', 'accounting.collect-payment', 'accounting.bulk-invoice-print'],

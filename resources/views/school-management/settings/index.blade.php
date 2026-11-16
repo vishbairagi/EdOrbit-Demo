@@ -59,6 +59,7 @@
                                 $showExam = \App\Models\SystemSetting::getSetting('show_examination_menu', '1') == '1';
                                 $showTrans = \App\Models\SystemSetting::getSetting('show_transport_menu', '1') == '1';
                                 $showAcc = \App\Models\SystemSetting::getSetting('show_accounting_menu', '1') == '1';
+                                $showWebsite = \App\Models\SystemSetting::getSetting('show_website_settings_menu', '1') == '1';
                             @endphp
                             <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                                 <input type="checkbox" name="show_library_menu" value="1" {{ $showLib ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
@@ -75,6 +76,10 @@
                             <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                                 <input type="checkbox" name="show_accounting_menu" value="1" {{ $showAcc ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
                                 <span class="text-sm font-semibold text-gray-700">Accounting Menu</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" name="show_website_settings_menu" value="1" {{ $showWebsite ? 'checked' : '' }} class="rounded text-navy focus:ring-navy h-4 w-4">
+                                <span class="text-sm font-semibold text-gray-700">Website Settings</span>
                             </label>
                         </div>
                     </div>
@@ -97,8 +102,11 @@
                     <div>
                         <label class="block text-sm font-bold text-heading mb-2">Project Theme Color</label>
                         <div class="flex items-center gap-4">
-                            <input type="color" name="theme_color" value="{{ \App\Models\SystemSetting::getSetting('theme_color', '#B47A42') }}" class="h-12 w-24 p-1 border border-gray-300 rounded-md cursor-pointer shadow-sm">
-                            <span class="text-sm text-gray-500 max-w-sm">Select the main primary color for the system. This affects buttons, links, and highlights.</span>
+                            <input type="color" id="theme_color_input" name="theme_color" value="{{ \App\Models\SystemSetting::getSetting('theme_color', '#B47A42') }}" class="h-12 w-24 p-1 border border-gray-300 rounded-md cursor-pointer shadow-sm">
+                            <div class="flex flex-col gap-1 max-w-sm">
+                                <span class="text-sm text-gray-500">Select the main primary color for the system. This affects buttons, links, and highlights.</span>
+                                <button type="button" onclick="document.getElementById('theme_color_input').value = '#B47A42'" class="text-xs text-blue-600 hover:text-blue-800 hover:underline text-left font-semibold w-fit">Reset to Default Color</button>
+                            </div>
                         </div>
                     </div>
                 </div>

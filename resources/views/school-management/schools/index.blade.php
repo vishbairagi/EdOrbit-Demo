@@ -93,7 +93,19 @@
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap">
-                            <div class="text-sm font-bold text-heading">{{ $school->name }}</div>
+                            <div class="flex items-center gap-3">
+                                @if($school->logo_url)
+                                    <img src="{{ $school->logo_url }}" alt="{{ $school->name }}" class="w-8 h-8 rounded-lg object-contain bg-gray-50 border border-gray-200 p-0.5 flex-shrink-0 shadow-sm" onerror="this.classList.add('hidden'); if(this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');">
+                                    <div class="w-8 h-8 rounded-lg bg-navy/10 text-navy flex items-center justify-center font-bold text-xs flex-shrink-0 hidden">
+                                        {{ strtoupper(substr($school->name, 0, 2)) }}
+                                    </div>
+                                @else
+                                    <div class="w-8 h-8 rounded-lg bg-navy/10 text-navy flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                        {{ strtoupper(substr($school->name, 0, 2)) }}
+                                    </div>
+                                @endif
+                                <div class="text-sm font-bold text-heading">{{ $school->name }}</div>
+                            </div>
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap">
                             <div class="text-xs text-heading"><i data-lucide="phone" class="w-3 h-3 inline mr-1 text-gray-400"></i> {{ $school->phone ?? 'N/A' }}</div>

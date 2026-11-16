@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class Staff extends Authenticatable
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+class Staff extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
@@ -111,5 +113,29 @@ class Staff extends Authenticatable
     public function subjects()
     {
         return $this->belongsToMany(Subject::class, 'staff_subject')->withTimestamps();
+    }
+
+    public function classTeachers()
+    {
+        return $this->hasMany(ClassTeacher::class);
+    }
+
+    public function liveClassCredentials()
+    {
+        return $this->hasMany(StaffLiveClassCredential::class);
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'user_type' => 'teacher',
+            'guard' => 'staff',
+            'school_id' => $this->school_id,
+        ];
     }
 }

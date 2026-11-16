@@ -38,7 +38,7 @@
 
     <div class="rounded-xl overflow-hidden mb-4" style="background:#fff; border:1px solid #E8E0D8; box-shadow:0 2px 8px rgba(33,27,23,.06);">
         <div class="text-center py-4" style="border-bottom:1px solid #E8E0D8;">
-            <h2 class="text-xl font-bold" style="color:#211B17;">Edu-Verse</h2>
+            <h2 class="text-xl font-bold" style="color:#211B17;">EdOrbit</h2>
             <div class="text-xs mt-1" style="color:#9e8f84;">Staff Attendance Report</div>
         </div>
         <div class="overflow-x-auto">

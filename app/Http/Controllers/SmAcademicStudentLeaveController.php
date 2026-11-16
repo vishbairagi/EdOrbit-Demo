@@ -21,6 +21,149 @@ class SmAcademicStudentLeaveController extends Controller
     {
         [$school, $session] = $this->getSchoolAndSession();
 
+        $classes = \App\Models\SchoolClass::with('sections')
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        // ── Session-Wide Analytics ──
+        $allSessionLeaves = \App\Models\StudentLeave::with(['student', 'schoolClass', 'section'])
+            ->where('school_id', $school->id)
+            ->where('session_id', $session->id)
+            ->get();
+
+        $allSessionStudents = \App\Models\Student::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->where('status', 'active')
+            ->get();
+
+        $totalLeavesCount = $allSessionLeaves->count();
+        $approvedLeavesCount = $allSessionLeaves->where('status', 'Approved')->count();
+        $pendingLeavesCount = $allSessionLeaves->where('status', 'Pending')->count();
+        $rejectedLeavesCount = $allSessionLeaves->where('status', 'Rejected')->count();
+        $approvalRate = $totalLeavesCount > 0 ? round(($approvedLeavesCount / $totalLeavesCount) * 100) : 0;
+
+        $totalStudentsCount = $allSessionStudents->count();
+        $studentsWithLeavesIds = $allSessionLeaves->pluck('student_id')->filter()->unique();
+        $studentsWithLeavesCount = $studentsWithLeavesIds->count();
+        $zeroLeaveCount = max(0, $totalStudentsCount - $studentsWithLeavesCount);
+        $zeroLeaveRate = $totalStudentsCount > 0 ? round(($zeroLeaveCount / $totalStudentsCount) * 100) : 0;
+
+        $totalClassesCount = $classes->count();
+        $avgLeavesPerClass = $totalClassesCount > 0 ? round($totalLeavesCount / $totalClassesCount, 1) : 0;
+
+        $currentMonth = date('Y-m');
+        $currentMonthLeaves = $allSessionLeaves->filter(function($l) use ($currentMonth) {
+            return $l->start_date && $l->start_date->format('Y-m') === $currentMonth;
+        })->count();
+
+        $totalLeaveDays = $allSessionLeaves->sum(function($l) {
+            if (!$l->start_date || !$l->end_date) return 1;
+            return max(1, $l->start_date->diffInDays($l->end_date) + 1);
+        });
+
+        // 1. Student-wise breakdown (Leaderboard of students having leaves)
+        $leavesByStudent = $allSessionLeaves->groupBy('student_id');
+        $studentBreakdown = $leavesByStudent->map(function ($sLeaves, $studentId) {
+            $first = $sLeaves->first();
+            $student = $first?->student;
+            $approved = $sLeaves->where('status', 'Approved')->count();
+            $pending = $sLeaves->where('status', 'Pending')->count();
+            $rejected = $sLeaves->where('status', 'Rejected')->count();
+            $days = $sLeaves->sum(function($l) {
+                if (!$l->start_date || !$l->end_date) return 1;
+                return max(1, $l->start_date->diffInDays($l->end_date) + 1);
+            });
+
+            return [
+                'student_id' => $studentId,
+                'name' => $student ? ($student->first_name . ' ' . ($student->last_name ?? '')) : 'Unknown Student',
+                'admission_no' => $student?->admission_no ?? '—',
+                'class_name' => $first?->schoolClass?->name ?? '—',
+                'section_name' => $first?->section?->name ?? '—',
+                'total_leaves' => $sLeaves->count(),
+                'total_days' => $days,
+                'approved_count' => $approved,
+                'pending_count' => $pending,
+                'rejected_count' => $rejected,
+                'recent_leave' => $sLeaves->sortByDesc('start_date')->first(),
+            ];
+        })->sortByDesc('total_leaves')->values();
+
+        // 2. Class-wise leaves breakdown
+        $classBreakdown = $classes->map(function ($cls) use ($allSessionLeaves, $allSessionStudents) {
+            $clsLeaves = $allSessionLeaves->where('class_id', $cls->id);
+            $clsStudents = $allSessionStudents->where('school_class_id', $cls->id);
+            $clsTotalStudents = $clsStudents->count();
+            $clsStudentsWithLeaves = $clsLeaves->pluck('student_id')->filter()->unique()->count();
+            $clsZeroLeave = max(0, $clsTotalStudents - $clsStudentsWithLeaves);
+            $clsDays = $clsLeaves->sum(function($l) {
+                if (!$l->start_date || !$l->end_date) return 1;
+                return max(1, $l->start_date->diffInDays($l->end_date) + 1);
+            });
+
+            return [
+                'class_id' => $cls->id,
+                'name' => $cls->name,
+                'total_students' => $clsTotalStudents,
+                'zero_leave_students' => $clsZeroLeave,
+                'total_leaves' => $clsLeaves->count(),
+                'total_days' => $clsDays,
+                'approved_count' => $clsLeaves->where('status', 'Approved')->count(),
+                'pending_count' => $clsLeaves->where('status', 'Pending')->count(),
+                'avg_per_student' => $clsTotalStudents > 0 ? round($clsLeaves->count() / $clsTotalStudents, 1) : 0,
+            ];
+        });
+
+        // 3. Month-wise leaves breakdown
+        $monthBreakdown = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $monthNum = str_pad($m, 2, '0', STR_PAD_LEFT);
+            $monthName = date('M', mktime(0, 0, 0, $m, 1));
+            $count = $allSessionLeaves->filter(function($l) use ($monthNum) {
+                return $l->start_date && $l->start_date->format('m') === $monthNum;
+            })->count();
+            $monthBreakdown[] = [
+                'month_num' => $monthNum,
+                'month_name' => $monthName,
+                'count' => $count,
+                'percentage' => $totalLeavesCount > 0 ? round(($count / $totalLeavesCount) * 100) : 0,
+            ];
+        }
+
+        // 4. Leave Types breakdown
+        $typeBreakdown = $allSessionLeaves->groupBy('leave_type')->map(function ($items, $type) use ($totalLeavesCount) {
+            return [
+                'type' => $type ?: 'General Leave',
+                'count' => $items->count(),
+                'percentage' => $totalLeavesCount > 0 ? round(($items->count() / $totalLeavesCount) * 100) : 0,
+                'approved' => $items->where('status', 'Approved')->count(),
+                'pending' => $items->where('status', 'Pending')->count(),
+            ];
+        })->values();
+
+        $analytics = [
+            'totalLeaves' => $totalLeavesCount,
+            'approvedCount' => $approvedLeavesCount,
+            'pendingCount' => $pendingLeavesCount,
+            'rejectedCount' => $rejectedLeavesCount,
+            'approvalRate' => $approvalRate,
+            'totalStudents' => $totalStudentsCount,
+            'studentsWithLeavesCount' => $studentsWithLeavesCount,
+            'zeroLeaveCount' => $zeroLeaveCount,
+            'zeroLeaveRate' => $zeroLeaveRate,
+            'avgLeavesPerClass' => $avgLeavesPerClass,
+            'currentMonthLeaves' => $currentMonthLeaves,
+            'totalLeaveDays' => $totalLeaveDays,
+            'studentBreakdown' => $studentBreakdown,
+            'classBreakdown' => $classBreakdown,
+            'monthBreakdown' => $monthBreakdown,
+            'typeBreakdown' => $typeBreakdown,
+        ];
+
+        // ── Main Query with Filters & Pagination ──
         $query = \App\Models\StudentLeave::with(['student', 'schoolClass', 'section'])
             ->where('school_id', $school->id)
             ->where('session_id', $session->id);
@@ -49,16 +192,19 @@ class SmAcademicStudentLeaveController extends Controller
             $search = $request->search;
             $query->whereHas('student', function($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('admission_no', 'like', "%{$search}%");
             });
         }
 
-        $leaves = $query->orderBy('id', 'desc')->paginate(25);
-        $classes = \App\Models\SchoolClass::where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->get();
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [5, 10, 15, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
 
-        return view('sm-academic.student-leaves.index', compact('leaves', 'classes'));
+        $leaves = $query->orderBy('id', 'desc')->paginate($perPage)->withQueryString();
+
+        return view('sm-academic.student-leaves.index', compact('leaves', 'classes', 'school', 'session', 'analytics', 'perPage'));
     }
 
     public function create()
@@ -387,11 +533,16 @@ class SmAcademicStudentLeaveController extends Controller
     }
     public function bulkDestroy(Request $request)
     {
+        [$school, $session] = $this->getSchoolAndSession();
         $ids = $request->input('ids', []);
         if (empty($ids)) {
             return back()->with('error', 'No items selected.');
         }
-        $deleted = \App\Models\StudentLeave::whereIn('id', $ids)->delete();
-        return back()->with('success', "$deleted record(s) deleted successfully.");
+        $deleted = \App\Models\StudentLeave::where('school_id', $school->id)
+            ->where('session_id', $session->id)
+            ->whereIn('id', $ids)
+            ->delete();
+
+        return back()->with('success', "$deleted student leave record(s) deleted successfully.");
     }
 }

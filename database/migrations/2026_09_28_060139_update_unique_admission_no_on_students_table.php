@@ -15,16 +15,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Check if the old index exists before dropping
-        $exists = DB::select("
-            SELECT COUNT(*) as cnt
-            FROM information_schema.STATISTICS
-            WHERE table_schema = DATABASE()
-              AND table_name = 'ed_students'
-              AND index_name = 'students_admission_no_unique'
-        ");
-        if ($exists[0]->cnt > 0) {
-            DB::statement('ALTER TABLE `ed_students` DROP INDEX `students_admission_no_unique`');
+        if (DB::getDriverName() === 'mysql') {
+            $exists = DB::select("
+                SELECT COUNT(*) as cnt
+                FROM information_schema.STATISTICS
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'ed_students'
+                  AND index_name = 'students_admission_no_unique'
+            ");
+            if (!empty($exists) && $exists[0]->cnt > 0) {
+                DB::statement('ALTER TABLE `ed_students` DROP INDEX `students_admission_no_unique`');
+            }
         }
     }
 

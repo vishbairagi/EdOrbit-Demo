@@ -29,6 +29,87 @@ class StudyMaterialController extends Controller
     {
         [$school, $session] = $this->getSchoolAndSession();
 
+        $classes = SchoolClass::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        // ── Session-Wide Analytics for Study Materials ──
+        $allSessionMaterials = StudyMaterial::with(['schoolClass', 'section'])
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->get();
+
+        $totalMaterialsCount = $allSessionMaterials->count();
+        $totalClassesCount = $classes->count();
+        $classesWithMaterialsCount = $classes->filter(fn ($c) => $allSessionMaterials->contains('school_class_id', $c->id))->count();
+        $classCoverageRate = $totalClassesCount > 0 ? round(($classesWithMaterialsCount / $totalClassesCount) * 100) : 0;
+        $avgMaterialsPerClass = $totalClassesCount > 0 ? round($totalMaterialsCount / $totalClassesCount, 1) : 0;
+
+        $withFilesCount = $allSessionMaterials->filter(fn ($m) => !empty($m->file_path))->count();
+        $textOnlyCount = max(0, $totalMaterialsCount - $withFilesCount);
+        $digitalResourceRate = $totalMaterialsCount > 0 ? round(($withFilesCount / $totalMaterialsCount) * 100) : 0;
+
+        $pdfCount = $allSessionMaterials->where('type', 'pdf')->count();
+        $videoCount = $allSessionMaterials->where('type', 'video')->count();
+        $imageCount = $allSessionMaterials->where('type', 'image')->count();
+        $notesCount = $allSessionMaterials->where('type', 'description')->count();
+
+        // Material Type Breakdown for modal
+        $typeKeys = ['pdf' => 'PDF Documents', 'video' => 'Video Lessons', 'image' => 'Diagrams & Images', 'description' => 'Notes & Descriptions'];
+        $typeBreakdown = collect($typeKeys)->map(function ($typeName, $typeKey) use ($allSessionMaterials, $totalMaterialsCount) {
+            $typeItems = $allSessionMaterials->where('type', $typeKey)->values();
+            $classesUsing = $typeItems->pluck('schoolClass.name')->filter()->unique()->values()->all();
+
+            return [
+                'type' => $typeKey,
+                'name' => $typeName,
+                'count' => $typeItems->count(),
+                'percentage' => $totalMaterialsCount > 0 ? round(($typeItems->count() / $totalMaterialsCount) * 100, 1) : 0,
+                'classes' => $classesUsing,
+                'materials' => $typeItems,
+            ];
+        })->values();
+
+        // Class Breakdown for modal
+        $classBreakdown = $classes->map(function ($cls) use ($allSessionMaterials) {
+            $clsMaterials = $allSessionMaterials->where('school_class_id', $cls->id)->values();
+            $pdf = $clsMaterials->where('type', 'pdf')->count();
+            $video = $clsMaterials->where('type', 'video')->count();
+            $image = $clsMaterials->where('type', 'image')->count();
+            $notes = $clsMaterials->where('type', 'description')->count();
+
+            return [
+                'id' => $cls->id,
+                'name' => $cls->name,
+                'count' => $clsMaterials->count(),
+                'pdf_count' => $pdf,
+                'video_count' => $video,
+                'image_count' => $image,
+                'notes_count' => $notes,
+                'materials' => $clsMaterials,
+            ];
+        });
+
+        $analytics = [
+            'totalMaterials' => $totalMaterialsCount,
+            'totalClasses' => $totalClassesCount,
+            'classesWithMaterials' => $classesWithMaterialsCount,
+            'classCoverageRate' => $classCoverageRate,
+            'avgMaterialsPerClass' => $avgMaterialsPerClass,
+            'withFilesCount' => $withFilesCount,
+            'textOnlyCount' => $textOnlyCount,
+            'digitalResourceRate' => $digitalResourceRate,
+            'pdfCount' => $pdfCount,
+            'videoCount' => $videoCount,
+            'imageCount' => $imageCount,
+            'notesCount' => $notesCount,
+            'typeBreakdown' => $typeBreakdown,
+            'classBreakdown' => $classBreakdown,
+        ];
+
+        // ── Main Query with Filters ──
         $query = StudyMaterial::with(['schoolClass', 'section'])
             ->where('school_id', $school->id)
             ->where('academic_session_id', $session->id);
@@ -50,17 +131,19 @@ class StudyMaterialController extends Controller
             });
         }
 
-        $materials = $query->orderByDesc('created_at')->get();
+        // For grouped view: all matching materials grouped by class
+        $filteredAllMaterials = (clone $query)->orderByDesc('created_at')->get();
+        $materialsByClass = $filteredAllMaterials->groupBy(fn ($item) => $item->schoolClass?->name ?? 'Unassigned');
 
-        $classes = SchoolClass::where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->orderBy('order')
-            ->orderBy('name')
-            ->get();
+        // Pagination for single table view
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [5, 10, 15, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
 
-        $materialsByClass = $materials->groupBy(fn ($item) => $item->schoolClass?->name ?? 'Unassigned');
+        $materials = $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
 
-        return view('sm-academic.study-materials.index', compact('school', 'session', 'materials', 'classes', 'materialsByClass'));
+        return view('sm-academic.study-materials.index', compact('school', 'session', 'materials', 'classes', 'materialsByClass', 'analytics', 'perPage'));
     }
 
     public function create()

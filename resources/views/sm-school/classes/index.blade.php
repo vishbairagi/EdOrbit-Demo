@@ -123,6 +123,65 @@
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    {{-- Search & Filter Toolbar --}}
+    <div class="px-4 py-3 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-3 bg-white">
+        <form method="GET" action="{{ route('sm-school.classes.index') }}" class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div class="relative flex-1 sm:w-72">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <i data-lucide="search" class="w-4 h-4"></i>
+                </div>
+                <input type="text" id="classSearchInput" name="search" value="{{ request('search') }}"
+                       autocomplete="off"
+                       class="block w-full pl-9 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-heading placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy"
+                       placeholder="Search by class, group, section...">
+                @if(request('search'))
+                    <a href="{{ route('sm-school.classes.index', request()->except('search', 'page')) }}"
+                       class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-red-500" title="Clear search">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </a>
+                @endif
+            </div>
+
+            <select name="class_group_id" onchange="this.form.submit()"
+                    class="py-1.5 px-3 border border-gray-300 bg-white rounded-lg text-sm text-heading focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy cursor-pointer">
+                <option value="">All Class Groups</option>
+                @foreach($classGroups as $group)
+                    <option value="{{ $group->id }}" {{ request('class_group_id') == $group->id ? 'selected' : '' }}>
+                        {{ $group->name }}
+                    </option>
+                @endforeach
+            </select>
+
+            <select name="per_page" onchange="this.form.submit()"
+                    class="py-1.5 px-3 border border-gray-300 bg-white rounded-lg text-sm text-heading focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy cursor-pointer"
+                    title="Entries per page">
+                <option value="2" {{ request('per_page') == 2 ? 'selected' : '' }}>2 / page</option>
+                <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 / page</option>
+                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10 / page</option>
+                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25 / page</option>
+                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 / page</option>
+            </select>
+
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-navy hover:bg-primary-dark text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                Search
+            </button>
+
+            @if(request()->filled('search') || request()->filled('class_group_id') || (request()->filled('per_page') && request('per_page') != 10))
+                <a href="{{ route('sm-school.classes.index') }}"
+                   class="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-xs font-semibold rounded-lg text-red-600 bg-white hover:bg-red-50 transition-colors">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Reset
+                </a>
+            @endif
+        </form>
+
+        <div class="text-xs text-body whitespace-nowrap self-end md:self-center">
+            Total: <span class="font-bold text-heading">{{ $classes->total() }}</span> {{ Str::plural('class', $classes->total()) }}
+        </div>
+    </div>
+
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead>
@@ -140,7 +199,11 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-100">
                 @forelse($classes as $class)
-                    <tr class="hover:bg-gray-50 transition-colors row-item" data-id="{{ $class->id }}">
+                    <tr class="hover:bg-gray-50 transition-colors row-item class-row"
+                        data-id="{{ $class->id }}"
+                        data-name="{{ strtolower($class->name) }}"
+                        data-group="{{ strtolower($class->classGroup->name ?? '') }}"
+                        data-sections="{{ strtolower($class->sections->pluck('name')->implode(' ')) }}">
                         <td class="px-4 py-2 text-center w-10">
                             <input type="checkbox" value="{{ $class->id }}" onchange="updateBulkToolbar()"
                                 class="row-checkbox w-4 h-4 rounded border-gray-300 text-red-600 cursor-pointer accent-red-600">
@@ -189,14 +252,38 @@
                     <tr>
                         <td colspan="5" class="px-6 py-12 text-center">
                             <i data-lucide="book-open" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
-                            <p class="font-medium text-heading">No classes yet for this session.</p>
-                            <p class="text-sm text-body mt-1">Classes are isolated per school and session.</p>
+                            @if(request()->filled('search') || request()->filled('class_group_id'))
+                                <p class="font-medium text-heading">No classes found matching your search.</p>
+                                <p class="text-sm text-body mt-1">Try adjusting your keywords or class group filter.</p>
+                                <a href="{{ route('sm-school.classes.index') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-red-600 bg-white hover:bg-red-50">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Clear Search Filters
+                                </a>
+                            @else
+                                <p class="font-medium text-heading">No classes yet for this session.</p>
+                                <p class="text-sm text-body mt-1">Classes are isolated per school and session.</p>
+                            @endif
                         </td>
                     </tr>
                 @endforelse
+                <tr id="clientEmptyRow" style="display:none;">
+                    <td colspan="5" class="px-6 py-8 text-center text-sm text-body">
+                        No matching classes on this page. Press <strong>Search</strong> or hit Enter to search all pages.
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
+
+    @if($classes->hasPages())
+        <div class="px-4 py-3 border-t border-gray-200 bg-white">
+            {{ $classes->links() }}
+        </div>
+    @else
+        <div class="px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <span>Showing <strong class="text-gray-700 font-semibold">{{ $classes->count() }}</strong> of <strong class="text-gray-700 font-semibold">{{ $classes->total() }}</strong> {{ Str::plural('class', $classes->total()) }}</span>
+            <span class="text-gray-400">Page 1 of 1</span>
+        </div>
+    @endif
 </div>
 
 <script>
@@ -303,5 +390,27 @@
     document.getElementById('classModal').addEventListener('click', function(e) { if (e.target === this) closeClassModal(); });
     document.getElementById('sectionModal').addEventListener('click', function(e) { if (e.target === this) closeSectionModal(); });
     document.getElementById('importModal').addEventListener('click', function(e) { if (e.target === this) closeImportModal(); });
+
+    // Real-time client-side search across class name, group, and sections
+    const classSearchInput = document.getElementById('classSearchInput');
+    if (classSearchInput) {
+        classSearchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            const rows = document.querySelectorAll('.class-row');
+            let visibleCount = 0;
+            rows.forEach(function(row) {
+                const name = row.getAttribute('data-name') || '';
+                const group = row.getAttribute('data-group') || '';
+                const sections = row.getAttribute('data-sections') || '';
+                const match = !query || name.includes(query) || group.includes(query) || sections.includes(query);
+                row.style.display = match ? '' : 'none';
+                if (match) visibleCount++;
+            });
+            const clientEmpty = document.getElementById('clientEmptyRow');
+            if (clientEmpty) {
+                clientEmpty.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+        });
+    }
 </script>
 @endsection

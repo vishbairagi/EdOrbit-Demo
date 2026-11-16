@@ -32,14 +32,15 @@
   --color-danger:        #A52A2A;
 }
 
-/* ── Base ── */
-body {
-  background-color: var(--color-cream);
-  color: var(--color-body);
-}
+@layer base {
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-body);
+  }
 
-h1, h2, h3, h4, h5, h6 {
-  color: var(--color-heading);
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--color-heading);
+  }
 }
 
 /* ── Utility aliases ── */

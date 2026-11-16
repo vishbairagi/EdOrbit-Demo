@@ -28,6 +28,9 @@ class SmRoleController extends Controller
             'academic.subjects' => 'Subjects',
             'academic.subject-types' => 'Subject Types',
             'academic.study-materials' => 'Study Materials',
+            'academic.noticeboards' => 'Notice Board',
+            'academic.homework' => 'Homework',
+            'academic.class-timetable' => 'Class Timetable',
         ],
         'Examination' => [
             'examination.dashboard' => 'Dashboard',
@@ -54,6 +57,7 @@ class SmRoleController extends Controller
             'sm-administrator.id-cards' => 'Staff ID Cards',
             'sm-administrator.payroll' => 'Staff Payroll',
             'sm-administrator.users' => 'Users',
+            'sm-administrator.live-classes' => 'Live Class Settings',
         ],
         'Accounting' => [
             'accounting.dashboard' => 'Accounting Dashboard',

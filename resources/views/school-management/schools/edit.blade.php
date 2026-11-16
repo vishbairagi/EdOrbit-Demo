@@ -12,7 +12,7 @@
     </a>
 </div>
 
-<form action="{{ route('school-management.schools.update', $school) }}" method="POST">
+<form action="{{ route('school-management.schools.update', $school) }}" method="POST" enctype="multipart/form-data">
     @csrf
     @method('PUT')
 
@@ -188,6 +188,54 @@
         {{-- Right Column: Status & Actions --}}
         <div class="space-y-5">
 
+            {{-- School Logo Card --}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="flex items-center px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-navy/5 to-transparent">
+                    <i data-lucide="image" class="w-4 h-4 mr-2 text-navy"></i>
+                    <h3 class="text-sm font-semibold text-heading">School Logo</h3>
+                </div>
+                <div class="p-5 space-y-4">
+                    {{-- Logo Preview Box --}}
+                    <div class="flex flex-col items-center justify-center">
+                        <div id="logoPreviewContainer" class="relative group w-36 h-36 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden transition-all hover:border-navy/50 shadow-inner">
+                            <img id="logoPreviewImg" 
+                                 src="{{ $school->logo_url ?? '' }}" 
+                                 alt="{{ $school->name }} Logo" 
+                                 class="w-full h-full object-contain p-2 transition-transform duration-200 group-hover:scale-105 {{ $school->logo_url ? '' : 'hidden' }}">
+                            <div id="logoPlaceholder" class="flex flex-col items-center text-center p-3 {{ $school->logo_url ? 'hidden' : '' }}">
+                                <div class="w-12 h-12 rounded-full bg-navy/10 text-navy flex items-center justify-center mb-2">
+                                    <i data-lucide="building-2" class="w-6 h-6"></i>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-600">No Logo Set</span>
+                                <span class="text-[10px] text-gray-400 mt-0.5">Upload a school logo</span>
+                            </div>
+                        </div>
+
+                        @if($school->logo)
+                            <div id="removeLogoWrapper" class="mt-3 flex items-center">
+                                <label class="inline-flex items-center text-xs text-red-600 hover:text-red-700 cursor-pointer font-medium bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-200 transition-colors">
+                                    <input type="checkbox" name="remove_logo" id="remove_logo" value="1" class="rounded border-red-300 text-red-600 focus:ring-red-500 mr-1.5" onchange="handleRemoveLogoToggle(this)">
+                                    <span>Remove Current Logo</span>
+                                </label>
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- File Input --}}
+                    <div>
+                        <label for="school_logo_input" class="block text-xs font-semibold text-gray-600 mb-1.5">Choose New Logo</label>
+                        <input type="file" name="logo" id="school_logo_input" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                               class="block w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-navy/10 file:text-navy hover:file:bg-navy/20 cursor-pointer border border-gray-200 rounded-lg p-1 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-navy/30"
+                               onchange="previewSchoolLogo(this)">
+                        <p class="text-[11px] text-gray-400 mt-1.5 flex items-center">
+                            <i data-lucide="info" class="w-3 h-3 mr-1 inline-flex flex-shrink-0"></i>
+                            Allowed: PNG, JPG, WEBP, SVG (Max 2MB)
+                        </p>
+                        @error('logo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </div>
+
             {{-- Status Card --}}
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="flex items-center px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-navy/5 to-transparent">
@@ -239,6 +287,44 @@
 </form>
 
 <script>
+    function previewSchoolLogo(input) {
+        const previewImg = document.getElementById('logoPreviewImg');
+        const placeholder = document.getElementById('logoPlaceholder');
+        const removeCheckbox = document.getElementById('remove_logo');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewImg.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                if (removeCheckbox) {
+                    removeCheckbox.checked = false;
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function handleRemoveLogoToggle(checkbox) {
+        const previewImg = document.getElementById('logoPreviewImg');
+        const placeholder = document.getElementById('logoPlaceholder');
+        const logoInput = document.getElementById('school_logo_input');
+
+        if (checkbox.checked) {
+            previewImg.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            logoInput.value = '';
+        } else {
+            const originalUrl = '{{ $school->logo_url }}';
+            if (originalUrl) {
+                previewImg.src = originalUrl;
+                previewImg.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+        }
+    }
+
     function generatePreview(prefix, baseNumber, padding) {
         let numStr = String(baseNumber);
         if (numStr.length < padding) numStr = '0'.repeat(padding - numStr.length) + numStr;
@@ -254,11 +340,14 @@
         let prefix = document.getElementById('admission_prefix').value || '';
         let baseNumber = parseInt(document.getElementById('admission_base_number').value) || 0;
         let padding = parseInt(document.getElementById('admission_base_padding').value) || 1;
-        document.getElementById('admission_preview').innerText = generatePreview(prefix, baseNumber, padding);
+        document.getElementById('admission_preview').innerText = generatePreview(prefix, baseNumber + 1, padding);
     }
     document.addEventListener('DOMContentLoaded', function() {
         updateEnrollmentPreview();
         updateAdmissionPreview();
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
     });
 </script>
 @endsection

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ config('app.name', 'Edu-Verse') }} - School Management</title>
+    <title>{{ config('app.name', 'EdOrbit') }} - School Management</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://unpkg.com/lucide@latest"></script>
     @php
@@ -12,6 +12,7 @@
         $showTransport = \App\Models\SystemSetting::getSetting('show_transport_menu', '1') == '1';
         $showLibrary = \App\Models\SystemSetting::getSetting('show_library_menu', '1') == '1';
         $showAccounting = \App\Models\SystemSetting::getSetting('show_accounting_menu', '1') == '1';
+        $showWebsiteSettings = \App\Models\SystemSetting::getSetting('show_website_settings_menu', '1') == '1';
     @endphp
     <style>
         /* ── Sidebar brand colours ── */
@@ -68,6 +69,112 @@
         #resizer:hover, #resizer.active { background: rgba(212,162,76,0.4); }
 
         .sidebar-text { transition: opacity 0.2s; }
+
+        /* ══════════════════════════════════════════════════════════════════
+           ── UNIFIED GLOBAL TABLE DESIGN SYSTEM ──
+           ══════════════════════════════════════════════════════════════════ */
+        /* Table Containers */
+        .table-container,
+        .overflow-x-auto:has(> table) {
+            border-radius: 0.75rem;
+            border: 1px solid #E8E0D8;
+            background: #ffffff;
+            box-shadow: 0 1px 3px 0 rgba(33, 27, 23, 0.05);
+            margin-bottom: 1.25rem;
+        }
+
+        /* All Standard Content Tables */
+        table:not(.no-theme-table) {
+            width: 100% !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            text-align: left !important;
+            font-size: 0.8125rem !important; /* 13px */
+        }
+
+        /* Universal Table Headers */
+        table:not(.no-theme-table) thead tr {
+            background: var(--color-primary, #B47A42) !important;
+            color: #ffffff !important;
+        }
+        table:not(.no-theme-table) thead th {
+            background: var(--color-primary, #B47A42) !important;
+            color: #ffffff !important;
+            font-size: 0.75rem !important; /* 12px */
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            padding: 0.65rem 1rem !important;
+            vertical-align: middle !important;
+            border-top: none !important;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.08) !important;
+            white-space: nowrap !important;
+        }
+        table:not(.no-theme-table) thead th input[type="checkbox"] {
+            margin: 0 auto;
+            display: block;
+        }
+
+        /* Universal Table Body Rows */
+        table:not(.no-theme-table) tbody tr {
+            background: #ffffff;
+            transition: background-color 0.15s ease-in-out;
+            border-bottom: 1px solid #EAE3DC !important;
+        }
+        table:not(.no-theme-table) tbody tr:last-child td {
+            border-bottom: none !important;
+        }
+        table:not(.no-theme-table) tbody tr:hover,
+        table:not(.no-theme-table) tbody tr.hover-row:hover {
+            background-color: #F8F5F0 !important; /* Warm luxury gold hover tint */
+        }
+        table:not(.no-theme-table) tbody tr.bg-red-50,
+        table:not(.no-theme-table) tbody tr.row-selected {
+            background-color: #FEF2F2 !important; /* Selected row red tint */
+        }
+
+        /* Universal Table Cells */
+        table:not(.no-theme-table) tbody td {
+            padding: 0.65rem 1rem !important;
+            font-size: 0.8125rem !important;
+            color: #211B17 !important;
+            vertical-align: middle !important;
+            border-bottom: 1px solid #EAE3DC !important;
+        }
+
+        /* Checkboxes */
+        input[type="checkbox"].row-checkbox,
+        input[type="checkbox"]#selectAll,
+        input[type="checkbox"]#selectAllCb,
+        input[type="checkbox"].select-all-checkbox {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 0.25rem;
+            border: 1px solid #CBD5E1;
+            cursor: pointer;
+            accent-color: #DC2626 !important;
+        }
+
+        /* Bulk Delete Toolbar Styling */
+        #bulkToolbar, .bulk-toolbar {
+            background: #FEF2F2 !important;
+            border: 1px solid #FECACA !important;
+            border-radius: 0.75rem !important;
+            padding: 0.625rem 1rem !important;
+            margin-bottom: 0.75rem !important;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        #bulkToolbar.hidden, .bulk-toolbar.hidden {
+            display: none !important;
+        }
+        #bulkToolbar #selectedCount, .bulk-toolbar .selected-count {
+            color: #B91C1C !important;
+            font-size: 0.8125rem !important;
+            font-weight: 700 !important;
+        }
     </style>
 </head>
 <body class="bg-cream text-body font-sans antialiased flex h-screen overflow-hidden">
@@ -100,7 +207,7 @@
                 return false;
             }
             if ($isClassTeacher) {
-                $teacherAllowed = ['sm-student.dashboard', 'sm-student.students', 'sm-student.print-id-cards', 'academic.dashboard', 'academic.subjects'];
+                $teacherAllowed = ['sm-student.dashboard', 'sm-student.students', 'sm-student.print-id-cards', 'academic.dashboard', 'academic.subjects', 'academic.noticeboards', 'academic.homework', 'academic.class-timetable', 'sm-administrator.live-classes'];
                 if (in_array($key, $teacherAllowed)) {
                     return true;
                 }
@@ -115,7 +222,7 @@
         <!-- Logo -->
         <div class="logo-bar h-16 flex items-center px-5 font-bold text-base tracking-wide overflow-hidden whitespace-nowrap">
             <i data-lucide="graduation-cap" class="w-5 h-5 mr-2 flex-shrink-0" style="color:var(--sb-gold)"></i>
-            <span class="sidebar-text" style="color:#fff">Edu-Verse</span>
+            <span class="sidebar-text" style="color:#fff">EdOrbit</span>
         </div>
 
         <nav class="flex-1 py-3 px-2 overflow-y-auto overflow-x-hidden space-y-0.5">
@@ -198,7 +305,7 @@
             </div>
             @endif
 
-            @if($hasPerm('academic.dashboard') || $hasPerm('academic.class-teachers') || $hasPerm('academic.class-sections') || $hasPerm('academic.mediums') || $hasPerm('academic.subjects') || $hasPerm('academic.subject-types') || $hasPerm('academic.study-materials'))
+            @if($hasPerm('academic.dashboard') || $hasPerm('academic.class-teachers') || $hasPerm('academic.class-sections') || $hasPerm('academic.mediums') || $hasPerm('academic.subjects') || $hasPerm('academic.subject-types') || $hasPerm('academic.study-materials') || $hasPerm('academic.noticeboards') || $hasPerm('academic.homework'))
             <!-- ── SM Academic ── -->
             <div style="margin-top: 12px;">
                 <!-- divider -->
@@ -245,8 +352,14 @@
                     @endif
                     @if($hasPerm('academic.subjects'))
                     <a href="{{ route('academic.assign-subjects.index') }}"
-                       class="sb-child {{ request()->routeIs('academic.assign-subjects.*') ? 'active' : '' }}">
+                       class="sb-child {{ request()->routeIs('academic.assign-subjects.*') && !request()->routeIs('academic.assign-subjects-bulk.*') ? 'active' : '' }}">
                         <span class="sidebar-text">Assign Subject</span>
+                    </a>
+                    @endif
+                    @if($hasPerm('academic.subjects'))
+                    <a href="{{ route('academic.assign-subjects-bulk.index') }}"
+                       class="sb-child {{ request()->routeIs('academic.assign-subjects-bulk.*') ? 'active' : '' }}">
+                        <span class="sidebar-text">Assign Subject in Bulk</span>
                     </a>
                     @endif
                     @if($hasPerm('academic.subject-types'))
@@ -255,10 +368,14 @@
                         <span class="sidebar-text">Subject Types</span>
                     </a>
                     @endif
-                    <a href="#" class="sb-child opacity-50 cursor-not-allowed">
+                    @if($hasPerm('academic.class-timetable'))
+                    <a href="{{ route('academic.class-timetable.index') }}"
+                       class="sb-child {{ request()->routeIs('academic.class-timetable.*') ? 'active' : '' }}">
                         <span class="sidebar-text">Class Timetable</span>
                     </a>
-                    <a href="#" class="sb-child opacity-50 cursor-not-allowed">
+                    @endif
+                    <a href="{{ route('academic.attendance.index') }}"
+                       class="sb-child {{ request()->routeIs('academic.attendance.*') ? 'active' : '' }}">
                         <span class="sidebar-text">Attendance</span>
                     </a>
                     <a href="{{ route('academic.student-leaves.index') }}"
@@ -271,14 +388,23 @@
                         <span class="sidebar-text">Study Materials</span>
                     </a>
                     @endif
-                    <a href="#" class="sb-child opacity-50 cursor-not-allowed">
+                    @if($hasPerm('academic.noticeboards'))
+                    <a href="{{ route('academic.noticeboards.index') }}"
+                       class="sb-child {{ request()->routeIs('academic.noticeboards.*') ? 'active' : '' }}">
+                        <span class="sidebar-text">Notice Board</span>
+                    </a>
+                    @endif
+                    @if($hasPerm('academic.homework'))
+                    <a href="{{ route('academic.homework.index') }}"
+                       class="sb-child {{ request()->routeIs('academic.homework.*') ? 'active' : '' }}">
                         <span class="sidebar-text">Homework</span>
                     </a>
+                    @endif
                 </div>
             </div>
             @endif
 
-            @if($showExamination && ($hasPerm('examination.dashboard') || $hasPerm('examination.exams') || $hasPerm('examination.groups') || $hasPerm('examination.admit-cards') || $hasPerm('examination.results') || $hasPerm('examination.reports')))
+            @if($showExamination && ($hasPerm('examination.dashboard') || $hasPerm('examination.exams') || $hasPerm('examination.groups') || $hasPerm('examination.admit-cards') || $hasPerm('examination.results')))
             <div style="margin-top: 12px;">
                 <div class="px-3 py-1" style="border-top: 1px solid var(--sb-border); margin-bottom: 4px;"></div>
                 <button type="button" id="examinationMenuToggle" class="sb-parent {{ request()->routeIs('examination.*') ? 'sb-school-active' : '' }}">
@@ -301,9 +427,6 @@
                     @endif
                     @if($hasPerm('examination.results'))
                     <a href="{{ route('examination.results.index') }}" class="sb-child {{ request()->routeIs('examination.results.*') ? 'active' : '' }}"><span class="sidebar-text">Exam Results</span></a>
-                    @endif
-                    @if($hasPerm('examination.reports'))
-                    <a href="{{ route('examination.reports.academic') }}" class="sb-child {{ request()->routeIs('examination.reports.*') ? 'active' : '' }}"><span class="sidebar-text">Academic Report</span></a>
                     @endif
                 </div>
             </div>
@@ -357,11 +480,15 @@
                         <span class="sidebar-text">Transfer Student</span>
                     </a>
                     @endif
+                    <a href="{{ route('sm-student.student-logins.index') }}"
+                       class="sb-child {{ request()->routeIs('sm-student.student-logins.*') ? 'active' : '' }}">
+                        <span class="sidebar-text">Student Login</span>
+                    </a>
                 </div>
             </div>
             @endif
 
-            @if($hasPerm('sm-administrator.dashboard') || $hasPerm('sm-administrator.admins') || $hasPerm('sm-administrator.roles') || $hasPerm('sm-administrator.staff') || $hasPerm('sm-administrator.attendance') || $hasPerm('sm-administrator.leaves') || $hasPerm('sm-administrator.id-cards') || $hasPerm('sm-administrator.payroll') || $hasPerm('sm-administrator.users'))
+            @if($hasPerm('sm-administrator.dashboard') || $hasPerm('sm-administrator.admins') || $hasPerm('sm-administrator.roles') || $hasPerm('sm-administrator.staff') || $hasPerm('sm-administrator.attendance') || $hasPerm('sm-administrator.leaves') || $hasPerm('sm-administrator.id-cards') || $hasPerm('sm-administrator.payroll') || $hasPerm('sm-administrator.users') || $hasPerm('sm-administrator.live-classes'))
             <!-- ── SM Administrator ── -->
             <div style="margin-top: 12px;">
                 <!-- divider -->
@@ -430,6 +557,45 @@
                         <span class="sidebar-text">Users</span>
                     </a>
                     @endif
+                    @if($hasPerm('sm-administrator.live-classes'))
+                    <a href="{{ route('sm-administrator.live-classes.index') }}"
+                       class="sb-child {{ request()->routeIs('sm-administrator.live-classes.*') ? 'active' : '' }}">
+                        <span class="sidebar-text">Live Class Settings</span>
+                    </a>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            @if($showWebsiteSettings && ($guard === 'super_admin' || $guard === 'staff'))
+            <!-- ── Website Settings ── -->
+            <div style="margin-top: 12px;">
+                <div class="px-3 py-1" style="border-top: 1px solid var(--sb-border); margin-bottom: 4px;"></div>
+                <button type="button" id="websiteSettingsMenuToggle" class="sb-parent {{ request()->routeIs('website-settings.*') ? 'sb-school-active' : '' }}">
+                    <div class="flex items-center min-w-0">
+                        <i data-lucide="layout" class="w-4 h-4 mr-2.5 flex-shrink-0 opacity-80"></i>
+                        <span class="sidebar-text truncate text-xs font-semibold uppercase tracking-wider">Website Settings</span>
+                    </div>
+                    <i data-lucide="chevron-down" id="websiteSettingsMenuIcon" class="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 sidebar-text ml-1 opacity-60"></i>
+                </button>
+
+                <div id="websiteSettingsMenu" class="pl-6 pr-1 py-0.5 space-y-0.5 {{ request()->routeIs('website-settings.*') ? '' : 'hidden' }}">
+                    <a href="{{ route('website-settings.header') }}"
+                       class="sb-child {{ request()->routeIs('website-settings.header') ? 'active' : '' }}">
+                        <span class="sidebar-text">Header</span>
+                    </a>
+                    <a href="{{ route('website-settings.homepage') }}"
+                       class="sb-child {{ request()->routeIs('website-settings.homepage') ? 'active' : '' }}">
+                        <span class="sidebar-text">Home Page</span>
+                    </a>
+                    <a href="{{ route('website-settings.footer') }}"
+                       class="sb-child {{ request()->routeIs('website-settings.footer') ? 'active' : '' }}">
+                        <span class="sidebar-text">Footer</span>
+                    </a>
+                    <a href="{{ route('website-settings.pages.index') }}"
+                       class="sb-child {{ request()->routeIs('website-settings.pages.*') ? 'active' : '' }}">
+                        <span class="sidebar-text">Pages</span>
+                    </a>
                 </div>
             </div>
             @endif
@@ -578,7 +744,7 @@
         </header>
 
         <!-- Page Content -->
-        <div class="flex-1 overflow-auto p-6" style="background:#F5F1EB;">
+        <div class="page-content-area flex-1 overflow-auto p-6" style="background:#F5F1EB;">
 
             @if(session('success'))
                 <div class="mb-5 p-4 rounded-lg flex items-start shadow-sm"
@@ -702,6 +868,16 @@
             });
         }
 
+        const websiteSettingsMenuToggle = document.getElementById('websiteSettingsMenuToggle');
+        const websiteSettingsMenu       = document.getElementById('websiteSettingsMenu');
+        const websiteSettingsMenuIcon   = document.getElementById('websiteSettingsMenuIcon');
+        if (websiteSettingsMenuToggle && websiteSettingsMenu && websiteSettingsMenuIcon) {
+            websiteSettingsMenuToggle.addEventListener('click', () => {
+                websiteSettingsMenu.classList.toggle('hidden');
+                websiteSettingsMenuIcon.classList.toggle('rotate-180');
+            });
+        }
+
         // ── Sidebar Resizer ──
         const sidebar  = document.getElementById('sidebar');
         const resizer  = document.getElementById('resizer');
@@ -751,8 +927,87 @@
                 }
             });
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        // ── UNIVERSAL BULK SELECT & DELETE SYSTEM ──
+        // ══════════════════════════════════════════════════════════════════
+        function toggleSelectAll(cb) {
+            const table = cb.closest('table') || document;
+            table.querySelectorAll('.row-checkbox').forEach(function(r) {
+                r.checked = cb.checked;
+                r.closest('tr')?.classList.toggle('bg-red-50', cb.checked);
+            });
+            updateBulkToolbar();
+        }
+
+        function updateBulkToolbar() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            const all     = document.querySelectorAll('.row-checkbox');
+            const toolbars = document.querySelectorAll('#bulkToolbar, .bulk-toolbar');
+            const countEls = document.querySelectorAll('#selectedCount, .selected-count');
+            const selectAlls = document.querySelectorAll('#selectAll, #selectAllCb, .select-all-checkbox');
+
+            document.querySelectorAll('.row-checkbox').forEach(function(r) {
+                r.closest('tr')?.classList.toggle('bg-red-50', r.checked);
+            });
+
+            if (checked.length > 0) {
+                toolbars.forEach(tb => tb.classList.remove('hidden'));
+                countEls.forEach(el => el.textContent = checked.length + ' item(s) selected');
+            } else {
+                toolbars.forEach(tb => tb.classList.add('hidden'));
+            }
+
+            selectAlls.forEach(sa => {
+                if (sa) {
+                    sa.indeterminate = checked.length > 0 && checked.length < all.length;
+                    sa.checked = all.length > 0 && checked.length === all.length;
+                }
+            });
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.row-checkbox').forEach(function(r) {
+                r.checked = false;
+                r.closest('tr')?.classList.remove('bg-red-50');
+            });
+            document.querySelectorAll('#selectAll, #selectAllCb, .select-all-checkbox').forEach(sa => {
+                if (sa) { sa.checked = false; sa.indeterminate = false; }
+            });
+            document.querySelectorAll('#bulkToolbar, .bulk-toolbar').forEach(tb => tb.classList.add('hidden'));
+        }
+
+        function confirmBulkDelete() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            if (checked.length === 0) return false;
+            if (!confirm('Are you sure you want to permanently delete ' + checked.length + ' selected item(s)?')) return false;
+            const container = document.getElementById('bulkIdsContainer') || document.getElementById('bulkDeleteInputs');
+            if (container) {
+                container.innerHTML = '';
+                checked.forEach(function(cb) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.name = 'ids[]';
+                    inp.value = cb.value;
+                    container.appendChild(inp);
+                });
+            }
+            return true;
+        }
+
+        window.toggleSelectAll   = toggleSelectAll;
+        window.updateBulkToolbar = updateBulkToolbar;
+        window.clearSelection    = clearSelection;
+        window.confirmBulkDelete = confirmBulkDelete;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+                cb.addEventListener('change', updateBulkToolbar);
+            });
+            document.querySelectorAll('#selectAll, #selectAllCb, .select-all-checkbox').forEach(function(sa) {
+                sa.addEventListener('change', function() { toggleSelectAll(this); });
+            });
+        });
     </script>
-</body>
-</html>
 </body>
 </html>

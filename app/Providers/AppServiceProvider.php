@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Pagination\Paginator::useTailwind();
         try {
             \Illuminate\Support\Facades\DB::connection()->getPdo();
             if (!\Illuminate\Support\Facades\Schema::hasTable('migrations')) {

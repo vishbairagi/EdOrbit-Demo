@@ -8,9 +8,11 @@ use App\Models\ExamAdmitCard;
 use App\Models\ExamGroup;
 use App\Models\ExamPaper;
 use App\Models\ExamResult;
+use App\Models\ExamResultItem;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Section;
+use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SystemSetting;
 use Illuminate\Http\JsonResponse;
@@ -36,33 +38,262 @@ class ExaminationController extends Controller
         Exam::whereIn('id', $request->ids)->delete();
         return redirect()->back()->with('success', 'Selected Exams deleted successfully.');
     }
-    public function dashboard(): View
+
+    public function dashboard(Request $request): View
     {
-        [$school, $session] = $this->schoolContext();
-        $exams = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id);
+        $schoolId = session('selected_school_id');
+        abort_if(! $schoolId, 403, 'No school selected.');
+        $school = School::findOrFail($schoolId);
 
-        $examCount = (clone $exams)->count();
-        $admitCardCount = ExamAdmitCard::whereHas('exam', fn ($query) => $query
-            ->where('school_id', $school->id)
-            ->where('academic_session_id', $session->id))->count();
-        $resultCount = ExamResult::whereHas('exam', fn ($query) => $query
-            ->where('school_id', $school->id)
-            ->where('academic_session_id', $session->id))->count();
+        $sessionId = $request->query('session_id')
+            ?: session('selected_session_id')
+            ?: SystemSetting::getSetting('current_session_id');
+        abort_if(! $sessionId, 422, 'No academic session selected.');
 
-        return view('examination.dashboard', compact('school', 'session', 'examCount', 'admitCardCount', 'resultCount'));
-    }
+        session([
+            'selected_session_id' => $sessionId,
+            'selected_academic_session_id' => $sessionId,
+        ]);
 
-    public function index(): View
-    {
-        [$school, $session] = $this->schoolContext();
+        $session = AcademicSession::findOrFail($sessionId);
+        $sessions = AcademicSession::orderBy('start_date', 'desc')->get();
+        $globalCurrentSessionId = SystemSetting::getSetting('current_session_id');
+        $globalCurrentSession = AcademicSession::find($globalCurrentSessionId);
+
+        $sid = $school->id;
+        $sessId = $session->id;
+
+        // ── 1. Exams & Statuses ──────────────────────────────────────────────────
         $exams = Exam::with(['schoolClass', 'examGroup', 'sections'])
             ->withCount(['papers', 'admitCards', 'results'])
-            ->where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->latest()
-            ->paginate(15);
+            ->where('school_id', $sid)
+            ->where('academic_session_id', $sessId)
+            ->get();
 
-        return view('examination.exams.index', compact('school', 'session', 'exams'));
+        $examCount = $exams->count();
+        $activeExamsCount = $exams->filter(fn ($e) => strtolower((string) $e->status) === 'active' || $e->status == '1')->count();
+        $inactiveExamsCount = max(0, $examCount - $activeExamsCount);
+        $activeExamsRate = $examCount > 0 ? round(($activeExamsCount / $examCount) * 100, 1) : 0;
+
+        // ── 2. Class-Wise Exam Distribution ──────────────────────────────────────
+        $palette = ['#B47A42', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#F59E0B', '#06B6D4'];
+        $classExamsGrouped = $exams->groupBy(fn ($e) => $e->schoolClass?->name ?: 'General / Multiple');
+        $classExamsData = [];
+        $cIdx = 0;
+        foreach ($classExamsGrouped as $className => $items) {
+            $cnt = $items->count();
+            $pct = $examCount > 0 ? round(($cnt / $examCount) * 100, 1) : 0;
+            $classExamsData[] = [
+                'name' => $className,
+                'count' => $cnt,
+                'percentage' => $pct,
+                'color' => $palette[$cIdx % count($palette)],
+            ];
+            $cIdx++;
+        }
+
+        // ── 3. Exam Groups Distribution ──────────────────────────────────────────
+        $examGroups = ExamGroup::where('school_id', $sid)->where('academic_session_id', $sessId)->get();
+        $examGroupCount = $examGroups->count();
+
+        $groupExamsGrouped = $exams->groupBy(fn ($e) => $e->examGroup?->name ?: 'Standalone Exams');
+        $examGroupsData = [];
+        $gColors = ['#8B5CF6', '#B47A42', '#10B981', '#3B82F6', '#EC4899', '#F59E0B'];
+        $gIdx = 0;
+        foreach ($groupExamsGrouped as $grpName => $items) {
+            $cnt = $items->count();
+            $pct = $examCount > 0 ? round(($cnt / $examCount) * 100, 1) : 0;
+            $examGroupsData[] = [
+                'name' => $grpName,
+                'count' => $cnt,
+                'percentage' => $pct,
+                'color' => $gColors[$gIdx % count($gColors)],
+            ];
+            $gIdx++;
+        }
+
+        // ── 4. Admit Cards Lifecycle & Coverage ──────────────────────────────────
+        $totalStudents = Student::where('school_id', $sid)
+            ->where('academic_session_id', $sessId)
+            ->count();
+
+        $admitCardCount = ExamAdmitCard::whereHas('exam', fn ($q) => $q
+            ->where('school_id', $sid)
+            ->where('academic_session_id', $sessId))->count();
+
+        $examsWithAdmitCardsCount = $exams->filter(fn ($e) => $e->admit_cards_count > 0)->count();
+        $admitCardCoverageRate = $examCount > 0 ? round(($examsWithAdmitCardsCount / $examCount) * 100, 1) : 0;
+
+        // ── 5. Results & Evaluation Processing ───────────────────────────────────
+        $resultCount = ExamResult::whereHas('exam', fn ($q) => $q
+            ->where('school_id', $sid)
+            ->where('academic_session_id', $sessId))->count();
+
+        $examsWithResultsCount = $exams->filter(fn ($e) => $e->results_count > 0)->count();
+        $resultEvaluationRate = $examCount > 0 ? round(($examsWithResultsCount / $examCount) * 100, 1) : 0;
+
+        // Result Items Pass vs Fail Rate
+        $resultItems = ExamResultItem::whereHas('examResult.exam', fn ($q) => $q
+            ->where('school_id', $sid)
+            ->where('academic_session_id', $sessId))->get();
+
+        $totalResultItems = $resultItems->count();
+        $passedItems = $resultItems->filter(fn ($i) => strtolower((string) $i->status) === 'pass')->count();
+        $failedItems = $resultItems->filter(fn ($i) => strtolower((string) $i->status) === 'fail')->count();
+        $passRate = $totalResultItems > 0 ? round(($passedItems / $totalResultItems) * 100, 1) : 0;
+
+        // ── 6. Total Exam Papers ─────────────────────────────────────────────────
+        $paperCount = ExamPaper::whereHas('exam', fn ($q) => $q
+            ->where('school_id', $sid)
+            ->where('academic_session_id', $sessId))->count();
+
+        return view('examination.dashboard', compact(
+            'school',
+            'session',
+            'sessions',
+            'globalCurrentSession',
+            'exams',
+            'examCount',
+            'activeExamsCount',
+            'inactiveExamsCount',
+            'activeExamsRate',
+            'classExamsData',
+            'examGroupCount',
+            'examGroupsData',
+            'totalStudents',
+            'admitCardCount',
+            'examsWithAdmitCardsCount',
+            'admitCardCoverageRate',
+            'resultCount',
+            'examsWithResultsCount',
+            'resultEvaluationRate',
+            'totalResultItems',
+            'passedItems',
+            'failedItems',
+            'passRate',
+            'paperCount'
+        ));
+    }
+
+    public function index(Request $request): View
+    {
+        [$school, $session] = $this->schoolContext();
+
+        $query = Exam::with(['schoolClass', 'examGroup', 'sections'])
+            ->withCount(['papers', 'admitCards', 'results'])
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id);
+
+        if ($request->filled('search')) {
+            $kw = trim($request->search);
+            $query->where(function ($q) use ($kw) {
+                $q->where('title', 'like', "%{$kw}%")
+                    ->orWhere('exam_center', 'like', "%{$kw}%")
+                    ->orWhereHas('schoolClass', fn ($cq) => $cq->where('name', 'like', "%{$kw}%"))
+                    ->orWhereHas('examGroup', fn ($gq) => $gq->where('name', 'like', "%{$kw}%"));
+            });
+        }
+
+        if ($request->filled('class_id')) {
+            $query->where('school_class_id', $request->class_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('exam_group_id')) {
+            $query->where('exam_group_id', $request->exam_group_id);
+        }
+
+        if ($request->filled('exam_type')) {
+            $query->where('exam_type', $request->exam_type);
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        if (! in_array($perPage, [10, 15, 25, 50, 100])) {
+            $perPage = 15;
+        }
+
+        $exams = $query->latest('id')->paginate($perPage)->withQueryString();
+
+        // Classes for current school and session
+        $classes = SchoolClass::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        // Exam Groups for current school and session
+        $examGroups = ExamGroup::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('name')
+            ->get();
+
+        // Session-wide Analytics
+        $totalExams = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->count();
+        $activeExams = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->where('status', 'active')->count();
+        $inactiveExams = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->where('status', 'inactive')->count();
+        $activeRate = $totalExams > 0 ? round(($activeExams / $totalExams) * 100, 1) : 0;
+
+        $totalClasses = $classes->count();
+        $classesWithExams = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->distinct()->pluck('school_class_id')->count();
+        $classCoverageRate = $totalClasses > 0 ? round(($classesWithExams / $totalClasses) * 100, 1) : 0;
+
+        $totalPapers = ExamPaper::whereHas('exam', fn ($q) => $q->where('school_id', $school->id)->where('academic_session_id', $session->id))->count();
+        $totalAdmitCards = ExamAdmitCard::whereHas('exam', fn ($q) => $q->where('school_id', $school->id)->where('academic_session_id', $session->id))->count();
+        $totalResults = ExamResult::whereHas('exam', fn ($q) => $q->where('school_id', $school->id)->where('academic_session_id', $session->id))->count();
+
+        // Class-wise exam breakdown for modal
+        $classBreakdown = $classes->map(function ($c) use ($school, $session, $totalExams) {
+            $count = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->where('school_class_id', $c->id)->count();
+            $activeCount = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->where('school_class_id', $c->id)->where('status', 'active')->count();
+            $pct = $totalExams > 0 ? round(($count / $totalExams) * 100, 1) : 0;
+
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'exam_count' => $count,
+                'active_count' => $activeCount,
+                'percentage' => $pct,
+            ];
+        });
+
+        // Exam group breakdown for modal
+        $groupBreakdown = $examGroups->map(function ($g) use ($school, $session) {
+            $count = Exam::where('school_id', $school->id)->where('academic_session_id', $session->id)->where('exam_group_id', $g->id)->count();
+
+            return [
+                'id' => $g->id,
+                'name' => $g->name,
+                'count' => $count,
+            ];
+        });
+
+        $analytics = [
+            'totalExams' => $totalExams,
+            'activeExams' => $activeExams,
+            'inactiveExams' => $inactiveExams,
+            'activeRate' => $activeRate,
+            'totalClasses' => $totalClasses,
+            'classesWithExams' => $classesWithExams,
+            'classCoverageRate' => $classCoverageRate,
+            'totalPapers' => $totalPapers,
+            'totalAdmitCards' => $totalAdmitCards,
+            'totalResults' => $totalResults,
+            'classBreakdown' => $classBreakdown,
+            'groupBreakdown' => $groupBreakdown,
+        ];
+
+        return view('examination.exams.index', compact(
+            'school',
+            'session',
+            'exams',
+            'classes',
+            'examGroups',
+            'analytics',
+            'perPage'
+        ));
     }
 
     public function create(): View
@@ -90,6 +321,15 @@ class ExaminationController extends Controller
         $this->saveExam($request, $exam);
 
         return redirect()->route('examination.exams.index')->with('success', 'Exam updated successfully.');
+    }
+
+    public function destroy(Exam $exam): RedirectResponse
+    {
+        $this->assertExamScope($exam);
+        $title = $exam->title;
+        $exam->delete();
+
+        return redirect()->route('examination.exams.index')->with('success', "Exam '{$title}' deleted successfully.");
     }
 
     public function subjects(SchoolClass $schoolClass): JsonResponse
@@ -246,11 +486,12 @@ class ExaminationController extends Controller
             'papers.*.start_time' => ['required', 'date_format:H:i,H:i:s'],
             'papers.*.end_time' => ['required', 'date_format:H:i,H:i:s', 'after:papers.*.start_time'],
             'papers.*.room_number' => ['nullable', 'string', 'max:100'],
-            'grade_criteria' => ['required', 'array:percentage_from,percentage_to,grade,status', 'min:1'],
+            'grade_criteria' => ['required', 'array:percentage_from,percentage_to,grade,status,remark', 'min:1'],
             'grade_criteria.percentage_from.*' => ['required', 'numeric', 'between:0,100'],
             'grade_criteria.percentage_to.*' => ['required', 'numeric', 'between:0,100'],
             'grade_criteria.grade.*' => ['required', 'string', 'max:20'],
             'grade_criteria.status.*' => ['required', 'string', 'max:100'],
+            'grade_criteria.remark.*' => ['nullable', 'string', 'max:150'],
             'result_thresholds' => ['nullable', 'array:show_subject_status,subject_pass_threshold,subject_status_header,subject_pass_label,subject_fail_label,show_overall_status,overall_pass_threshold,max_failed_subjects,overall_row_header,overall_pass_label,overall_fail_label'],
             'result_thresholds.show_subject_status' => ['nullable', 'boolean'],
             'result_thresholds.subject_pass_threshold' => ['nullable', 'numeric', 'between:0,100'],
@@ -397,11 +638,12 @@ class ExaminationController extends Controller
                 ->where('school_id', $schoolId)
                 ->where('academic_session_id', $sessionId)
                 ->ignore($ignoreId)],
-            'grade_criteria' => ['required', 'array:percentage_from,percentage_to,grade,status', 'min:1'],
+            'grade_criteria' => ['required', 'array:percentage_from,percentage_to,grade,status,remark', 'min:1'],
             'grade_criteria.percentage_from.*' => ['required', 'numeric', 'between:0,100'],
             'grade_criteria.percentage_to.*' => ['required', 'numeric', 'between:0,100'],
             'grade_criteria.grade.*' => ['required', 'string', 'max:20'],
             'grade_criteria.status.*' => ['required', 'string', 'max:100'],
+            'grade_criteria.remark.*' => ['nullable', 'string', 'max:150'],
             'result_thresholds' => ['required', 'array:show_subject_status,subject_pass_threshold,subject_status_header,subject_pass_label,subject_fail_label,show_overall_status,overall_pass_threshold,max_failed_subjects,overall_row_header,overall_pass_label,overall_fail_label'],
             'result_thresholds.show_subject_status' => ['nullable', 'boolean'],
             'result_thresholds.subject_pass_threshold' => ['nullable', 'numeric', 'between:0,100'],
@@ -435,6 +677,7 @@ class ExaminationController extends Controller
                 'percentage_to' => (float) $to,
                 'grade' => $grade,
                 'status' => $gradeStatus !== '' ? $gradeStatus : ($grade === 'F' ? 'Fail' : 'Pass'),
+                'remark' => trim((string) ($input['remark'][$index] ?? '')),
             ];
         }
 

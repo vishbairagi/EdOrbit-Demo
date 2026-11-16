@@ -37,8 +37,10 @@ use App\Http\Controllers\StudyMaterialController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\SubjectTypeController;
 use App\Http\Controllers\AssignSubjectController;
+use App\Http\Controllers\AssignSubjectBulkController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\TransferStudentController;
+use App\Http\Controllers\HomepageSettingController;
 use App\Models\School;
 use Illuminate\Support\Facades\Route;
 
@@ -47,9 +49,10 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+// Student API Endpoint
+Route::match(['get', 'post'], '/student/dashboard', [\App\Http\Controllers\Api\Student\DashboardController::class, 'index'])->middleware('jwt.student')->name('api.student.dashboard');
+
+Route::get('/', [AuthController::class, 'showLogin'])->name('home');
 
 Route::prefix('school-management')->name('school-management.')->group(function () {
     Route::get('/dashboard', [SchoolManagementDashboardController::class, 'index'])->name('dashboard');
@@ -118,6 +121,10 @@ Route::prefix('sm-school')->name('sm-school.')->middleware('permission')->group(
     Route::delete('/settings/payment-methods/{paymentMethod}', [SchoolAccountingSettingsController::class, 'destroyPaymentMethod'])->name('settings.payment-methods.destroy');
     Route::post('/settings/update', [\App\Http\Controllers\SchoolSettingController::class, 'update'])->name('settings.update');
     Route::post('/settings/test-email', [\App\Http\Controllers\SchoolSettingController::class, 'testEmail'])->name('settings.test-email');
+    Route::post('/settings/test-sms', [\App\Http\Controllers\SchoolSettingController::class, 'testSms'])->name('settings.test-sms');
+    Route::post('/settings/trash/{id}/restore', [StudentCategoryController::class, 'restoreTrash'])->name('settings.trash.restore');
+    Route::delete('/settings/trash/{id}', [StudentCategoryController::class, 'destroyTrash'])->name('settings.trash.destroy');
+    Route::post('/settings/trash/empty', [StudentCategoryController::class, 'emptyTrash'])->name('settings.trash.empty');
 });
 
 Route::prefix('accounting')->name('accounting.')->middleware('permission')->group(function () {
@@ -248,6 +255,10 @@ Route::prefix('academic')->name('academic.')->middleware('permission')->group(fu
     Route::post('/assign-subjects/{subject}/teachers', [AssignSubjectController::class, 'assign'])->name('assign-subjects.assign');
     Route::delete('/assign-subjects/{subject}/teachers/{staff}', [AssignSubjectController::class, 'remove'])->name('assign-subjects.remove');
 
+    // Assign Subjects in Bulk
+    Route::get('/assign-subjects-bulk', [AssignSubjectBulkController::class, 'index'])->name('assign-subjects-bulk.index');
+    Route::post('/assign-subjects-bulk', [AssignSubjectBulkController::class, 'assign'])->name('assign-subjects-bulk.assign');
+
     // Student Leaves
     Route::get('/student-leaves/export', [\App\Http\Controllers\SmAcademicStudentLeaveController::class, 'export'])->name('student-leaves.export');
     Route::get('/student-leaves/import/demo', [\App\Http\Controllers\SmAcademicStudentLeaveController::class, 'importDemo'])->name('student-leaves.import-demo');
@@ -267,6 +278,44 @@ Route::prefix('academic')->name('academic.')->middleware('permission')->group(fu
     Route::delete('/study-materials/{studyMaterial}', [StudyMaterialController::class, 'destroy'])->name('study-materials.destroy');
     Route::post('/study-materials/bulk-delete', [StudyMaterialController::class, 'bulkDestroy'])->name('study-materials.bulk-destroy');
     Route::get('/study-materials/sections/{schoolClass}', [StudyMaterialController::class, 'getSections'])->name('study-materials.sections');
+
+    // Notice Board
+    Route::get('/noticeboards/export', [\App\Http\Controllers\NoticeBoardController::class, 'export'])->name('noticeboards.export');
+    Route::get('/noticeboards/import/sample', [\App\Http\Controllers\NoticeBoardController::class, 'sampleCsv'])->name('noticeboards.sample-csv');
+    Route::post('/noticeboards/import', [\App\Http\Controllers\NoticeBoardController::class, 'import'])->name('noticeboards.import');
+    Route::post('/noticeboards/bulk-delete', [\App\Http\Controllers\NoticeBoardController::class, 'bulkDestroy'])->name('noticeboards.bulk-delete');
+    Route::patch('/noticeboards/{noticeboard}/status', [\App\Http\Controllers\NoticeBoardController::class, 'updateStatus'])->name('noticeboards.update-status');
+    Route::get('/noticeboards/{noticeboard}/download', [\App\Http\Controllers\NoticeBoardController::class, 'download'])->name('noticeboards.download');
+    Route::get('/noticeboards/sections/{schoolClass}', [\App\Http\Controllers\NoticeBoardController::class, 'getSections'])->name('noticeboards.sections');
+    Route::resource('noticeboards', \App\Http\Controllers\NoticeBoardController::class)->except(['create', 'show', 'edit']);
+
+    // Homework
+    Route::get('/homework/sample-csv', [\App\Http\Controllers\HomeworkController::class, 'sampleCsv'])->name('homework.sample-csv');
+    Route::post('/homework/import', [\App\Http\Controllers\HomeworkController::class, 'import'])->name('homework.import');
+    Route::get('/homework/print', [\App\Http\Controllers\HomeworkController::class, 'print'])->name('homework.print');
+    Route::get('/homework/export', [\App\Http\Controllers\HomeworkController::class, 'export'])->name('homework.export');
+    Route::post('/homework/bulk-delete', [\App\Http\Controllers\HomeworkController::class, 'bulkDestroy'])->name('homework.bulk-delete');
+    Route::get('/homework/sections-and-subjects/{schoolClass}', [\App\Http\Controllers\HomeworkController::class, 'getSectionsAndSubjects'])->name('homework.sections-and-subjects');
+    Route::get('/homework/{homework}/download/{index?}', [\App\Http\Controllers\HomeworkController::class, 'downloadAttachment'])->name('homework.download');
+    Route::resource('homework', \App\Http\Controllers\HomeworkController::class);
+
+    // Class Timetable
+    Route::get('/class-timetable', [\App\Http\Controllers\ClassTimetableController::class, 'index'])->name('class-timetable.index');
+    Route::post('/class-timetable', [\App\Http\Controllers\ClassTimetableController::class, 'store'])->name('class-timetable.store');
+    Route::get('/class-timetable/class-data/{schoolClass}', [\App\Http\Controllers\ClassTimetableController::class, 'classData'])->name('class-timetable.class-data');
+    Route::post('/class-timetable/delete-timetable', [\App\Http\Controllers\ClassTimetableController::class, 'destroyClassTimetable'])->name('class-timetable.destroy-timetable');
+    Route::post('/class-timetable/bulk-delete', [\App\Http\Controllers\ClassTimetableController::class, 'bulkDestroy'])->name('class-timetable.bulk-destroy');
+    Route::get('/class-timetable/{schoolClass}/{section?}', [\App\Http\Controllers\ClassTimetableController::class, 'show'])->name('class-timetable.show');
+    Route::put('/class-timetable/{classTimetable}', [\App\Http\Controllers\ClassTimetableController::class, 'update'])->name('class-timetable.update');
+    Route::delete('/class-timetable/slot/{classTimetable}', [\App\Http\Controllers\ClassTimetableController::class, 'destroy'])->name('class-timetable.destroy');
+    Route::get('/class-timetable/{schoolClass}/{section?}/print', [\App\Http\Controllers\ClassTimetableController::class, 'print'])->name('class-timetable.print');
+
+    // Attendance (Timetable-Based Student Attendance)
+    Route::get('/attendance', [\App\Http\Controllers\StudentAttendanceController::class, 'index'])->name('attendance.index');
+    Route::get('/attendance/take', [\App\Http\Controllers\StudentAttendanceController::class, 'create'])->name('attendance.create');
+    Route::post('/attendance/save', [\App\Http\Controllers\StudentAttendanceController::class, 'store'])->name('attendance.store');
+    Route::get('/attendance/report', [\App\Http\Controllers\StudentAttendanceController::class, 'report'])->name('attendance.report');
+    Route::get('/attendance/timetable-slots', [\App\Http\Controllers\StudentAttendanceController::class, 'getTimetableSlots'])->name('attendance.timetable-slots');
 });
 
 // ── Examination ──
@@ -279,6 +328,7 @@ Route::prefix('examination')->name('examination.')->middleware('permission')->gr
     Route::post('/exams', [ExaminationController::class, 'store'])->name('exams.store');
     Route::get('/exams/{exam}/edit', [ExaminationController::class, 'edit'])->name('exams.edit');
     Route::put('/exams/{exam}', [ExaminationController::class, 'update'])->name('exams.update');
+    Route::delete('/exams/{exam}', [ExaminationController::class, 'destroy'])->name('exams.destroy');
     Route::get('/classes/{schoolClass}/subjects', [ExaminationController::class, 'subjects'])->name('classes.subjects');
 
     Route::post('/groups/bulk-delete', [ExaminationController::class, 'bulkDestroyGroup'])->name('groups.bulk-destroy');
@@ -346,6 +396,12 @@ Route::prefix('sm-student')->name('sm-student.')->middleware('permission')->grou
     Route::get('/transfer', [TransferStudentController::class, 'index'])->name('transfer.index');
     Route::post('/transfer/{student}', [TransferStudentController::class, 'transfer'])->name('transfer.store');
     Route::get('/transfer/{student}/certificate', [TransferStudentController::class, 'showCertificate'])->name('transfer.certificate');
+
+    // Student Logins
+    Route::get('/student-logins', [\App\Http\Controllers\StudentLoginController::class, 'index'])->name('student-logins.index');
+    Route::post('/student-logins', [\App\Http\Controllers\StudentLoginController::class, 'store'])->name('student-logins.store');
+    Route::put('/student-logins/{id}', [\App\Http\Controllers\StudentLoginController::class, 'update'])->name('student-logins.update');
+    Route::delete('/student-logins/{id}', [\App\Http\Controllers\StudentLoginController::class, 'destroy'])->name('student-logins.destroy');
 });
 
 // ── SM Administrator ──
@@ -412,6 +468,36 @@ Route::prefix('sm-administrator')->name('sm-administrator.')->middleware('permis
 
     // All Users
     Route::get('/users', [SmUsersController::class, 'index'])->name('users.index');
+
+    // Live Class Settings (Google Meet)
+    Route::get('/live-classes/export', [\App\Http\Controllers\LiveClassSettingController::class, 'export'])->name('live-classes.export');
+    Route::post('/live-classes/bulk-export', [\App\Http\Controllers\LiveClassSettingController::class, 'export'])->name('live-classes.bulk-export');
+    Route::post('/live-classes/bulk-delete', [\App\Http\Controllers\LiveClassSettingController::class, 'bulkDestroy'])->name('live-classes.bulk-delete');
+    Route::post('/live-classes/bulk-destroy', [\App\Http\Controllers\LiveClassSettingController::class, 'bulkDestroy'])->name('live-classes.bulk-destroy');
+    Route::get('/live-classes', [\App\Http\Controllers\LiveClassSettingController::class, 'index'])->name('live-classes.index');
+    Route::post('/live-classes/credential', [\App\Http\Controllers\LiveClassSettingController::class, 'storeCredential'])->name('live-classes.store-credential');
+    Route::delete('/live-classes/{staff}/credential', [\App\Http\Controllers\LiveClassSettingController::class, 'destroyCredential'])->name('live-classes.destroy-credential');
+    Route::post('/live-classes/{staff}/connect', [\App\Http\Controllers\LiveClassSettingController::class, 'connect'])->name('live-classes.connect');
+});
+
+// Google Meet OAuth Callback
+Route::get('/google-meet/oauth/callback', [\App\Http\Controllers\LiveClassSettingController::class, 'callback'])->name('google-meet.callback');
+
+
+// ── Website Settings ──
+Route::prefix('website-settings')->name('website-settings.')->group(function () {
+    Route::get('/header', [HomepageSettingController::class, 'header'])->name('header');
+    Route::post('/header', [HomepageSettingController::class, 'updateHeader'])->name('header.update');
+    
+    Route::get('/homepage', [HomepageSettingController::class, 'index'])->name('homepage');
+    Route::post('/homepage', [HomepageSettingController::class, 'update'])->name('homepage.update');
+    
+    Route::get('/footer', [HomepageSettingController::class, 'footer'])->name('footer');
+    Route::post('/footer', [HomepageSettingController::class, 'updateFooter'])->name('footer.update');
+
+    Route::post('pages/upload-image', [\App\Http\Controllers\PageController::class, 'uploadImage'])->name('pages.upload-image');
+    Route::resource('pages', \App\Http\Controllers\PageController::class)->except(['show']);
+    Route::post('pages/{page}/add-to-menu', [\App\Http\Controllers\PageController::class, 'addToMenu'])->name('pages.add-to-menu');
 });
 
 // ── Library ──
@@ -425,6 +511,7 @@ Route::prefix('library')->name('library.')->middleware('permission')->group(func
     Route::get('/books/{book}/edit', [LibraryController::class, 'editBook'])->name('books.edit');
     Route::put('/books/{book}', [LibraryController::class, 'updateBook'])->name('books.update');
     Route::delete('/books/{book}', [LibraryController::class, 'destroyBook'])->name('books.destroy');
+    Route::post('/books/bulk-delete', [LibraryController::class, 'bulkDestroyBooks'])->name('books.bulk-destroy');
 
     // Book Issue
     Route::get('/book-issue', [LibraryController::class, 'bookIssue'])->name('book-issue');
@@ -440,6 +527,7 @@ Route::prefix('library')->name('library.')->middleware('permission')->group(func
     Route::get('/library-cards', [LibraryController::class, 'libraryCards'])->name('library-cards');
     Route::post('/library-cards/generate', [LibraryController::class, 'generateCards'])->name('library-cards.generate');
     Route::delete('/library-cards/{card}', [LibraryController::class, 'destroyCard'])->name('library-cards.destroy');
+    Route::post('/library-cards/bulk-delete', [LibraryController::class, 'bulkDestroyCards'])->name('library-cards.bulk-destroy');
 });
 
 // ── Staff / Admin Personal Dashboard ──
@@ -448,3 +536,9 @@ Route::prefix('staff-portal')->name('staff.')->group(function () {
     Route::get('/id-card', [StaffDashboardController::class, 'idCard'])->name('id-card');
     Route::post('/leave/apply', [StaffDashboardController::class, 'applyLeave'])->name('leave.apply');
 });
+
+// ── WordPress / School Plugin API Compatibility Routes ──
+require __DIR__ . '/wp_json_api.php';
+
+// ── Dynamic Pages (Catch All) ──
+Route::get('/{slug}', [\App\Http\Controllers\PageController::class, 'show'])->name('page.show');

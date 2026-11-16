@@ -24,14 +24,32 @@ class ClassGroupController extends Controller
         return [$school, $session];
     }
 
-    public function index()
+    public function index(Request $request)
     {
         [$school, $session] = $this->getSchoolAndSession();
 
-        $classGroups = ClassGroup::where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->orderBy('name')
-            ->get();
+        $query = ClassGroup::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id);
+
+        if ($search = trim($request->input('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status') && in_array($request->status, ['active', 'inactive'])) {
+            $query->where('status', $request->status);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [2, 5, 10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $classGroups = $query->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
 
         return view('sm-school.class-groups.index', compact('school', 'session', 'classGroups'));
     }

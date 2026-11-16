@@ -21,17 +21,212 @@ use Illuminate\View\View;
 
 class ExaminationWorkflowController extends Controller
 {
-    public function admitCards(): View
+    public function admitCards(Request $request): View
     {
-        [$school, $session] = $this->schoolContext();
-        $exams = Exam::with('schoolClass')
+        $schoolId = session('selected_school_id');
+        if (! $schoolId) {
+            $schoolId = School::first()?->id;
+            if ($schoolId) {
+                session(['selected_school_id' => $schoolId]);
+            }
+        }
+        abort_if(! $schoolId, 403, 'No school selected.');
+        $school = School::findOrFail($schoolId);
+
+        if ($request->filled('session_id')) {
+            $sessionId = (int) $request->query('session_id');
+            session([
+                'selected_session_id' => $sessionId,
+                'selected_academic_session_id' => $sessionId,
+            ]);
+        } else {
+            $sessionId = session('selected_session_id') ?: SystemSetting::getSetting('current_session_id');
+        }
+
+        if (! $sessionId) {
+            $sessionId = AcademicSession::latest('start_date')->first()?->id;
+        }
+        abort_if(! $sessionId, 422, 'No academic session selected.');
+
+        $session = AcademicSession::findOrFail($sessionId);
+        $sessions = AcademicSession::orderBy('start_date', 'desc')->get();
+        $globalCurrentSessionId = SystemSetting::getSetting('current_session_id');
+
+        $query = Exam::with(['schoolClass', 'examGroup'])
+            ->withCount('admitCards')
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id);
+
+        if ($request->filled('search')) {
+            $kw = trim($request->search);
+            $query->where(function (Builder $q) use ($kw) {
+                $q->where('title', 'like', "%{$kw}%")
+                    ->orWhere('exam_center', 'like', "%{$kw}%")
+                    ->orWhereHas('schoolClass', fn (Builder $cq) => $cq->where('name', 'like', "%{$kw}%"))
+                    ->orWhereHas('examGroup', fn (Builder $gq) => $gq->where('name', 'like', "%{$kw}%"));
+            });
+        }
+
+        if ($request->filled('class_id')) {
+            $query->where('school_class_id', $request->class_id);
+        }
+
+        if ($request->filled('month')) {
+            $monthVal = (string) $request->month;
+            if (str_contains($monthVal, '-')) {
+                [$y, $m] = explode('-', $monthVal);
+                $query->whereYear('start_date', $y)->whereMonth('start_date', $m);
+            } elseif (is_numeric($monthVal)) {
+                $query->whereMonth('start_date', (int) $monthVal);
+            }
+        }
+
+        if ($request->filled('card_status')) {
+            if ($request->card_status === 'generated') {
+                $query->has('admitCards');
+            } elseif ($request->card_status === 'pending') {
+                $query->doesntHave('admitCards');
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        if (! in_array($perPage, [10, 15, 25, 50, 100])) {
+            $perPage = 15;
+        }
+
+        $exams = $query->orderByDesc('start_date')->paginate($perPage)->withQueryString();
+
+        $classes = SchoolClass::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        $allSessionExams = Exam::with(['schoolClass', 'examGroup'])
             ->withCount('admitCards')
             ->where('school_id', $school->id)
             ->where('academic_session_id', $session->id)
-            ->orderByDesc('start_date')
-            ->paginate(15);
+            ->orderBy('start_date')
+            ->get();
 
-        return view('examination.admit-cards.index', compact('school', 'session', 'exams'));
+        $totalExams = $allSessionExams->count();
+        $totalAdmitCards = (int) $allSessionExams->sum('admit_cards_count');
+
+        $examsWithCards = $allSessionExams->filter(fn ($e) => $e->admit_cards_count > 0)->count();
+        $examsWithoutCards = max(0, $totalExams - $examsWithCards);
+        $coverageRate = $totalExams > 0 ? round(($examsWithCards / $totalExams) * 100, 1) : 0;
+
+        $totalStudents = Student::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->where('status', 'Active')
+            ->count();
+
+        $totalClassesCount = $classes->count();
+        $classesWithCardsCount = $allSessionExams->filter(fn ($e) => $e->admit_cards_count > 0)
+            ->pluck('school_class_id')
+            ->unique()
+            ->count();
+        $classCoverageRate = $totalClassesCount > 0 ? round(($classesWithCardsCount / $totalClassesCount) * 100, 1) : 0;
+
+        $avgCardsPerExam = $examsWithCards > 0 ? round($totalAdmitCards / $examsWithCards, 1) : 0;
+
+        $currentMonth = (int) now()->format('n');
+        $currentMonthName = now()->format('F');
+        $examsThisMonth = $allSessionExams->filter(fn ($e) => $e->start_date && (int) $e->start_date->format('n') === $currentMonth)->count();
+
+        $monthsGrouped = [];
+        foreach ($allSessionExams as $exam) {
+            if ($exam->start_date) {
+                $monthNum = (int) $exam->start_date->format('n');
+                $monthName = $exam->start_date->format('F');
+                $year = $exam->start_date->format('Y');
+                $key = $exam->start_date->format('Y-m');
+
+                if (! isset($monthsGrouped[$key])) {
+                    $monthsGrouped[$key] = [
+                        'key' => $key,
+                        'month_num' => $monthNum,
+                        'month_name' => $monthName,
+                        'year' => $year,
+                        'label' => $exam->start_date->format('M Y'),
+                        'full_label' => $exam->start_date->format('F Y'),
+                        'exam_count' => 0,
+                        'admit_cards_count' => 0,
+                        'exams' => [],
+                    ];
+                }
+                $monthsGrouped[$key]['exam_count']++;
+                $monthsGrouped[$key]['admit_cards_count'] += (int) $exam->admit_cards_count;
+                $monthsGrouped[$key]['exams'][] = [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'class_name' => $exam->schoolClass?->name ?? 'N/A',
+                    'start_date' => $exam->start_date->format('Y-m-d'),
+                    'end_date' => $exam->end_date?->format('Y-m-d'),
+                    'admit_cards_count' => (int) $exam->admit_cards_count,
+                ];
+            }
+        }
+
+        ksort($monthsGrouped);
+        $monthsBreakdown = array_values($monthsGrouped);
+        $activeMonthsCount = count($monthsBreakdown);
+
+        $peakMonth = null;
+        if (! empty($monthsBreakdown)) {
+            $sortedByExams = $monthsBreakdown;
+            usort($sortedByExams, fn ($a, $b) => $b['exam_count'] <=> $a['exam_count']);
+            $peakMonth = $sortedByExams[0];
+        }
+
+        $classBreakdown = $classes->map(function ($c) use ($allSessionExams) {
+            $classExams = $allSessionExams->where('school_class_id', $c->id);
+            $examCount = $classExams->count();
+            $cardsCount = (int) $classExams->sum('admit_cards_count');
+            $withCards = $classExams->filter(fn ($e) => $e->admit_cards_count > 0)->count();
+            $pct = $examCount > 0 ? round(($withCards / $examCount) * 100, 1) : 0;
+
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'exam_count' => $examCount,
+                'admit_cards_count' => $cardsCount,
+                'with_cards_count' => $withCards,
+                'coverage_pct' => $pct,
+            ];
+        });
+
+        $analytics = [
+            'totalExams' => $totalExams,
+            'totalAdmitCards' => $totalAdmitCards,
+            'examsWithCards' => $examsWithCards,
+            'examsWithoutCards' => $examsWithoutCards,
+            'coverageRate' => $coverageRate,
+            'totalStudents' => $totalStudents,
+            'totalClassesCount' => $totalClassesCount,
+            'classesWithCardsCount' => $classesWithCardsCount,
+            'classCoverageRate' => $classCoverageRate,
+            'avgCardsPerExam' => $avgCardsPerExam,
+            'currentMonth' => $currentMonth,
+            'currentMonthName' => $currentMonthName,
+            'examsThisMonth' => $examsThisMonth,
+            'activeMonthsCount' => $activeMonthsCount,
+            'peakMonth' => $peakMonth,
+            'monthsBreakdown' => $monthsBreakdown,
+            'classBreakdown' => $classBreakdown,
+            'allSessionExams' => $allSessionExams,
+        ];
+
+        return view('examination.admit-cards.index', compact(
+            'school',
+            'session',
+            'sessions',
+            'globalCurrentSessionId',
+            'exams',
+            'classes',
+            'analytics',
+            'perPage'
+        ));
     }
 
     public function generateAdmitCardsForm(Request $request, Exam $exam): View
@@ -54,7 +249,7 @@ class ExaminationWorkflowController extends Controller
     public function viewAdmitCards(Exam $exam): View
     {
         $this->assertExamScope($exam);
-        $exam->load(['schoolClass', 'school']);
+        $exam->load(['schoolClass', 'school', 'session']);
         $cards = $exam->admitCards()
             ->with(['student.section', 'student.schoolClass', 'student.activeSubjects', 'student.school'])
             ->orderBy('exam_roll_number')
@@ -175,7 +370,7 @@ class ExaminationWorkflowController extends Controller
     public function printAdmitCards(Request $request, Exam $exam): View
     {
         $this->assertExamScope($exam);
-        $exam->load('school');
+        $exam->load(['schoolClass', 'school', 'session']);
         $cardsQuery = $exam->admitCards()->with([
             'student.section',
             'student.schoolClass',
@@ -192,17 +387,212 @@ class ExaminationWorkflowController extends Controller
         return view('examination.admit-cards.print', compact('exam', 'cards', 'papers'));
     }
 
-    public function results(): View
+    public function results(Request $request): View
     {
-        [$school, $session] = $this->schoolContext();
-        $exams = Exam::with('schoolClass')
+        $schoolId = session('selected_school_id');
+        if (! $schoolId) {
+            $schoolId = School::first()?->id;
+            if ($schoolId) {
+                session(['selected_school_id' => $schoolId]);
+            }
+        }
+        abort_if(! $schoolId, 403, 'No school selected.');
+        $school = School::findOrFail($schoolId);
+
+        if ($request->filled('session_id')) {
+            $sessionId = (int) $request->query('session_id');
+            session([
+                'selected_session_id' => $sessionId,
+                'selected_academic_session_id' => $sessionId,
+            ]);
+        } else {
+            $sessionId = session('selected_session_id') ?: SystemSetting::getSetting('current_session_id');
+        }
+
+        if (! $sessionId) {
+            $sessionId = AcademicSession::latest('start_date')->first()?->id;
+        }
+        abort_if(! $sessionId, 422, 'No academic session selected.');
+
+        $session = AcademicSession::findOrFail($sessionId);
+        $sessions = AcademicSession::orderBy('start_date', 'desc')->get();
+        $globalCurrentSessionId = SystemSetting::getSetting('current_session_id');
+
+        $query = Exam::with(['schoolClass', 'examGroup'])
+            ->withCount('results')
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id);
+
+        if ($request->filled('search')) {
+            $kw = trim($request->search);
+            $query->where(function (Builder $q) use ($kw) {
+                $q->where('title', 'like', "%{$kw}%")
+                    ->orWhere('exam_center', 'like', "%{$kw}%")
+                    ->orWhereHas('schoolClass', fn (Builder $cq) => $cq->where('name', 'like', "%{$kw}%"))
+                    ->orWhereHas('examGroup', fn (Builder $gq) => $gq->where('name', 'like', "%{$kw}%"));
+            });
+        }
+
+        if ($request->filled('class_id')) {
+            $query->where('school_class_id', $request->class_id);
+        }
+
+        if ($request->filled('month')) {
+            $monthVal = (string) $request->month;
+            if (str_contains($monthVal, '-')) {
+                [$y, $m] = explode('-', $monthVal);
+                $query->whereYear('start_date', $y)->whereMonth('start_date', $m);
+            } elseif (is_numeric($monthVal)) {
+                $query->whereMonth('start_date', (int) $monthVal);
+            }
+        }
+
+        if ($request->filled('result_status')) {
+            if ($request->result_status === 'generated') {
+                $query->has('results');
+            } elseif ($request->result_status === 'pending') {
+                $query->doesntHave('results');
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        if (! in_array($perPage, [10, 15, 25, 50, 100])) {
+            $perPage = 15;
+        }
+
+        $exams = $query->orderByDesc('start_date')->paginate($perPage)->withQueryString();
+
+        $classes = SchoolClass::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        $allSessionExams = Exam::with(['schoolClass', 'examGroup'])
             ->withCount('results')
             ->where('school_id', $school->id)
             ->where('academic_session_id', $session->id)
-            ->orderByDesc('start_date')
-            ->paginate(15);
+            ->orderBy('start_date')
+            ->get();
 
-        return view('examination.results.index', compact('school', 'session', 'exams'));
+        $totalExams = $allSessionExams->count();
+        $totalResults = (int) $allSessionExams->sum('results_count');
+
+        $examsWithResults = $allSessionExams->filter(fn ($e) => $e->results_count > 0)->count();
+        $examsWithoutResults = max(0, $totalExams - $examsWithResults);
+        $evaluationRate = $totalExams > 0 ? round(($examsWithResults / $totalExams) * 100, 1) : 0;
+
+        $totalStudents = Student::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->where('status', 'Active')
+            ->count();
+
+        $totalClassesCount = $classes->count();
+        $classesWithResultsCount = $allSessionExams->filter(fn ($e) => $e->results_count > 0)
+            ->pluck('school_class_id')
+            ->unique()
+            ->count();
+        $classCoverageRate = $totalClassesCount > 0 ? round(($classesWithResultsCount / $totalClassesCount) * 100, 1) : 0;
+
+        $avgResultsPerExam = $examsWithResults > 0 ? round($totalResults / $examsWithResults, 1) : 0;
+
+        $currentMonth = (int) now()->format('n');
+        $currentMonthName = now()->format('F');
+        $examsThisMonth = $allSessionExams->filter(fn ($e) => $e->start_date && (int) $e->start_date->format('n') === $currentMonth)->count();
+
+        $monthsGrouped = [];
+        foreach ($allSessionExams as $exam) {
+            if ($exam->start_date) {
+                $monthNum = (int) $exam->start_date->format('n');
+                $monthName = $exam->start_date->format('F');
+                $year = $exam->start_date->format('Y');
+                $key = $exam->start_date->format('Y-m');
+
+                if (! isset($monthsGrouped[$key])) {
+                    $monthsGrouped[$key] = [
+                        'key' => $key,
+                        'month_num' => $monthNum,
+                        'month_name' => $monthName,
+                        'year' => $year,
+                        'label' => $exam->start_date->format('M Y'),
+                        'full_label' => $exam->start_date->format('F Y'),
+                        'exam_count' => 0,
+                        'results_count' => 0,
+                        'exams' => [],
+                    ];
+                }
+                $monthsGrouped[$key]['exam_count']++;
+                $monthsGrouped[$key]['results_count'] += (int) $exam->results_count;
+                $monthsGrouped[$key]['exams'][] = [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'class_name' => $exam->schoolClass?->name ?? 'N/A',
+                    'start_date' => $exam->start_date->format('Y-m-d'),
+                    'end_date' => $exam->end_date?->format('Y-m-d'),
+                    'results_count' => (int) $exam->results_count,
+                ];
+            }
+        }
+
+        ksort($monthsGrouped);
+        $monthsBreakdown = array_values($monthsGrouped);
+        $activeMonthsCount = count($monthsBreakdown);
+
+        $peakMonth = null;
+        if (! empty($monthsBreakdown)) {
+            $sortedByExams = $monthsBreakdown;
+            usort($sortedByExams, fn ($a, $b) => $b['exam_count'] <=> $a['exam_count']);
+            $peakMonth = $sortedByExams[0];
+        }
+
+        $classBreakdown = $classes->map(function ($c) use ($allSessionExams) {
+            $classExams = $allSessionExams->where('school_class_id', $c->id);
+            $examCount = $classExams->count();
+            $resultsCount = (int) $classExams->sum('results_count');
+            $withResults = $classExams->filter(fn ($e) => $e->results_count > 0)->count();
+            $pct = $examCount > 0 ? round(($withResults / $examCount) * 100, 1) : 0;
+
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'exam_count' => $examCount,
+                'results_count' => $resultsCount,
+                'with_results_count' => $withResults,
+                'coverage_pct' => $pct,
+            ];
+        });
+
+        $analytics = [
+            'totalExams' => $totalExams,
+            'totalResults' => $totalResults,
+            'examsWithResults' => $examsWithResults,
+            'examsWithoutResults' => $examsWithoutResults,
+            'evaluationRate' => $evaluationRate,
+            'totalStudents' => $totalStudents,
+            'totalClassesCount' => $totalClassesCount,
+            'classesWithResultsCount' => $classesWithResultsCount,
+            'classCoverageRate' => $classCoverageRate,
+            'avgResultsPerExam' => $avgResultsPerExam,
+            'currentMonth' => $currentMonth,
+            'currentMonthName' => $currentMonthName,
+            'examsThisMonth' => $examsThisMonth,
+            'activeMonthsCount' => $activeMonthsCount,
+            'peakMonth' => $peakMonth,
+            'monthsBreakdown' => $monthsBreakdown,
+            'classBreakdown' => $classBreakdown,
+            'allSessionExams' => $allSessionExams,
+        ];
+
+        return view('examination.results.index', compact(
+            'school',
+            'session',
+            'sessions',
+            'globalCurrentSessionId',
+            'exams',
+            'classes',
+            'analytics',
+            'perPage'
+        ));
     }
 
     public function generateResultsForm(Request $request, Exam $exam): View

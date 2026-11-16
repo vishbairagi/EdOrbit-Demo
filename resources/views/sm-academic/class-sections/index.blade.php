@@ -4,172 +4,158 @@
 
 @section('content')
 
-{{-- Page Header --}}
-<div class="bg-navy rounded-xl shadow-md px-5 py-3 flex flex-wrap items-center justify-between gap-3 mb-6">
-    <div class="flex items-center gap-3">
-        <div class="flex items-center text-white font-bold text-base">
-            <i data-lucide="layers" class="w-4 h-4 mr-2"></i>
-            Classes and Sections
-        </div>
-        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-              style="background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.3);">
-            <i data-lucide="calendar" class="w-3 h-3"></i>
-            {{ $session->name }}
-        </span>
+{{-- Top Header Section (Matching /academic/class-teachers) --}}
+<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <div>
+        <h3 class="text-base font-bold text-heading">Classes and Sections</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Session: {{ $session->name }} &nbsp;·&nbsp; Total Classes: {{ $classes->total() }}</p>
     </div>
     <div class="flex items-center gap-2">
         <a href="{{ route('academic.class-sections.export') }}"
-           class="inline-flex items-center px-3 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/30 transition-colors">
-            <i data-lucide="download" class="w-3.5 h-3.5 mr-1"></i>
-            Export CSV
+           class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <i data-lucide="download" class="w-3.5 h-3.5 mr-1"></i> Export CSV
         </a>
         <button onclick="document.getElementById('importSectionModal').classList.remove('hidden')"
-                class="inline-flex items-center px-3 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/30 transition-colors">
-            <i data-lucide="upload" class="w-3.5 h-3.5 mr-1"></i>
-            Import CSV
+                class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <i data-lucide="upload" class="w-3.5 h-3.5 mr-1"></i> Import CSV
         </button>
     </div>
 </div>
 
 {{-- Flash Message --}}
 @if(session('success'))
-<div class="mb-5 px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+<div class="mb-3.5 px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2"
      style="background:#eef7f0; color:#2d5434; border:1px solid #b7dfc0;">
-    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
     {{ session('success') }}
 </div>
 @endif
 
-{{-- Search & Filter Bar --}}
-<div class="bg-card rounded-xl border border-gray-100 shadow-sm p-4 mb-5">
-    <form method="GET" action="{{ route('academic.class-sections.index') }}" class="flex flex-col md:flex-row items-center gap-3">
-        <div class="w-full md:w-80">
-            <label class="block text-xs font-medium text-body mb-1">Search Class Name:</label>
-            <div class="relative">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="e.g. Class 1, Class 6..."
-                       class="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-1 focus:ring-navy">
+{{-- Main Unified Table Card --}}
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+    {{-- Search & Filter Toolbar --}}
+    <div class="px-4 py-3 border-b border-gray-200 bg-gray-50/50">
+        <form method="GET" action="{{ route('academic.class-sections.index') }}" class="flex flex-wrap items-center gap-2">
+            <div class="relative flex-1 min-w-[200px]">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                </div>
+                <input type="text" name="search" value="{{ request('search') }}"
+                       placeholder="Search class, section or group..."
+                       class="w-full pl-8 pr-8 py-2 rounded-lg border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy bg-white text-heading">
                 @if(request('search'))
-                    <a href="{{ route('academic.class-sections.index') }}"
+                    <a href="{{ route('academic.class-sections.index', request()->except('search', 'page')) }}"
                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
-                        <i data-lucide="x-circle" class="w-4 h-4"></i>
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </a>
                 @endif
             </div>
-        </div>
-        <div class="flex items-end mt-auto gap-2">
-            <button type="submit"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-xs font-semibold hover:opacity-90 transition bg-navy">
+
+            <select name="per_page" onchange="this.form.submit()" class="rounded-lg border border-gray-300 text-xs px-2.5 py-2 focus:outline-none bg-white text-heading">
+                <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 / page</option>
+                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10 / page</option>
+                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25 / page</option>
+                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 / page</option>
+                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 / page</option>
+            </select>
+
+            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-semibold bg-navy hover:bg-primary-dark transition shadow-2xs">
                 <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                Search Class
+                Filter
             </button>
-            @if(request('search'))
-                <a href="{{ route('academic.class-sections.index') }}"
-                   class="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-body hover:bg-gray-50 transition">
+
+            @if(request('search') || (request('per_page') && request('per_page') != 10))
+                <a href="{{ route('academic.class-sections.index') }}" class="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-300 text-xs font-medium hover:bg-gray-100 text-red-600 transition">
                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                     Reset
                 </a>
             @endif
-        </div>
-    </form>
-</div>
-
-@if($classes->isEmpty())
-    <div class="bg-card rounded-xl border border-gray-100 shadow-sm p-10 text-center">
-        <i data-lucide="layers" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
-        <p class="text-lg font-medium text-heading">No classes found.</p>
-        <p class="text-sm text-body mt-1">Create classes first from <a href="{{ route('sm-school.classes.index') }}" class="text-navy underline">SM School → Classes</a>.</p>
+        </form>
     </div>
-@else
-    {{-- Table --}}
-    {{-- ══ Bulk Delete Toolbar ══ --}}
-    <div id="bulkToolbar" class="hidden mb-3 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 animate-pulse-once">
-        <span id="selectedCount" class="text-sm font-semibold text-red-700">0 selected</span>
+
+    {{-- Bulk Delete Toolbar --}}
+    <div id="bulkToolbar" class="hidden flex items-center gap-3 bg-red-50 border-b border-red-200 px-4 py-2.5">
+        <span id="selectedCount" class="text-xs font-semibold text-red-700">0 selected</span>
         <form id="bulkDeleteForm" method="POST" action="{{ route('academic.class-sections.bulk-destroy') }}" onsubmit="return confirmBulkDelete(event)">
             @csrf
             <div id="bulkIdsContainer"></div>
-            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Selected
             </button>
         </form>
         <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 underline">Clear</button>
     </div>
-    <div class="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <table class="w-full text-sm">
+
+    {{-- Table --}}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-xs">
             <thead>
                 <tr class="bg-navy">
-                    <th class="px-4 py-3 w-10 text-center">
-                        <input type="checkbox" id="selectAllClasses" class="rounded border-gray-300 text-navy focus:ring-navy cursor-pointer" onclick="toggleAllClasses(this)">
+                    <th class="px-3 py-2.5 w-10 text-center">
+                        <input type="checkbox" id="selectAllClasses" class="w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600" onclick="toggleAllClasses(this)" title="Select All">
                     </th>
-                    <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Class</th>
-                    <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Number of Sections</th>
-                    <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Total Students</th>
-                    <th class="px-4 py-3 text-left text-white font-semibold text-xs uppercase tracking-wider">Actions</th>
+                    <th class="px-4 py-2.5 text-left text-white font-bold text-xs uppercase tracking-wider">Class</th>
+                    <th class="px-4 py-2.5 text-left text-white font-bold text-xs uppercase tracking-wider">Class Group</th>
+                    <th class="px-4 py-2.5 text-left text-white font-bold text-xs uppercase tracking-wider">Number of Sections</th>
+                    <th class="px-4 py-2.5 text-left text-white font-bold text-xs uppercase tracking-wider">Total Students</th>
+                    <th class="px-4 py-2.5 text-right text-white font-bold text-xs uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
-                @foreach($classes as $class)
-                    <tr class="hover:bg-gray-50 transition-colors" id="class-row-{{ $class->id }}">
-                        <td class="px-4 py-3 text-center">
-                            <input type="checkbox" value="{{ $class->id }}" class="class-checkbox rounded border-gray-300 text-navy focus:ring-navy cursor-pointer" onchange="updateBulkDeleteButton()">
+            <tbody class="divide-y divide-gray-100 bg-white">
+                @forelse($classes as $class)
+                    <tr class="hover:bg-gray-50/80 transition-colors" id="class-row-{{ $class->id }}">
+                        <td class="px-3 py-2.5 text-center">
+                            <input type="checkbox" value="{{ $class->id }}" class="class-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600" onchange="updateBulkDeleteButton()">
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                <button onclick="toggleSections({{ $class->id }})"
-                                        class="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-navy" style="min-width:20px;">
-                                    <i data-lucide="plus" class="w-3 h-3" id="toggle-icon-{{ $class->id }}"></i>
+                        <td class="px-4 py-2.5">
+                            <span class="font-bold text-xs text-gray-950">{{ $class->name }}</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-xs font-semibold text-gray-800">
+                            {{ $class->classGroup->name ?? '—' }}
+                        </td>
+                        <td class="px-4 py-2.5 text-xs font-bold text-gray-900">
+                            {{ $class->sections->count() }}
+                        </td>
+                        <td class="px-4 py-2.5 text-xs">
+                            <span class="font-bold text-gray-950">{{ $class->total_students }}</span>
+                            <span class="text-2xs text-gray-700 font-semibold ml-1">(M: {{ $class->male_students }} · F: {{ $class->female_students }})</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button type="button" onclick="openAddSection({{ $class->id }}, '{{ $class->name }}')"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-black transition-colors shadow-2xs"
+                                        title="Add New / Manage Sections">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5 text-gray-600"></i>
+                                    <span>Add New / Manage</span>
                                 </button>
-                                <span class="font-semibold text-heading">{{ $class->name }}</span>
-                            </div>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="text-navy font-semibold">{{ $class->sections->count() }}</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold text-white bg-navy">
-                                    Male: {{ $class->male_students }}
-                                </span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold text-white" style="background:#1a9090;">
-                                    Female: {{ $class->female_students }}
-                                </span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold text-white" style="background:#7a4bca;">
-                                    Total: {{ $class->total_students }}
-                                </span>
-                            </div>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex gap-2">
-                                <button onclick="openAddSection({{ $class->id }}, '{{ $class->name }}')"
-                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white rounded-md hover:opacity-90 transition-opacity bg-navy">
-                                    Add New / Manage
-                                </button>
-                                <button onclick="toggleSections({{ $class->id }})"
-                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white rounded-md hover:opacity-90 transition-opacity"
-                                        style="background:#1a7a9a;">
-                                    View
+                                <button type="button" onclick="toggleSections({{ $class->id }})"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-black transition-colors shadow-2xs"
+                                        title="View Sections">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5 text-gray-600"></i>
+                                    <span>View</span>
                                 </button>
                             </div>
                         </td>
                     </tr>
                     {{-- Expandable Sections Row --}}
                     <tr id="sections-{{ $class->id }}" class="hidden">
-                        <td colspan="5" class="px-6 py-3 bg-gray-50">
+                        <td colspan="6" class="px-6 py-3 bg-gray-50/70 border-t border-b border-gray-100">
                             @if($class->sections->isEmpty())
-                                <p class="text-xs text-gray-400 italic">No sections yet. Add one above.</p>
+                                <p class="text-xs text-gray-500 font-medium italic">No sections yet. Click "Add New / Manage" to add sections.</p>
                             @else
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($class->sections as $section)
-                                        <div class="flex items-center gap-1.5 bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs">
-                                            <input type="checkbox" value="{{ $section->id }}" class="section-checkbox rounded border-gray-300 text-navy focus:ring-navy cursor-pointer" onchange="updateBulkDeleteButton()">
-                                            <span class="font-medium text-heading">{{ $section->name }}</span>
+                                        <div class="flex items-center gap-1.5 bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs shadow-2xs">
+                                            <input type="checkbox" value="{{ $section->id }}" class="section-checkbox w-3.5 h-3.5 rounded border-gray-300 cursor-pointer accent-red-600" onchange="updateBulkDeleteButton()">
+                                            <span class="font-semibold text-gray-900">{{ $section->name }}</span>
                                             @if($section->capacity)
-                                                <span class="text-gray-400">(cap: {{ $section->capacity }})</span>
+                                                <span class="text-gray-600 text-2xs font-semibold">(cap: {{ $section->capacity }})</span>
                                             @endif
                                             <form method="POST" action="{{ route('academic.class-sections.sections.destroy', $section) }}"
                                                   onsubmit="return confirm('Delete section {{ $section->name }}?')"
                                                   class="inline">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="text-red-400 hover:text-red-600 ml-1">
+                                                <button type="submit" class="text-red-400 hover:text-red-600 ml-1 transition-colors" title="Delete section">
                                                     <i data-lucide="x" class="w-3 h-3"></i>
                                                 </button>
                                             </form>
@@ -179,11 +165,30 @@
                             @endif
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center py-10 text-xs text-gray-500">
+                            <i data-lucide="layers" class="w-8 h-8 text-gray-300 mx-auto mb-1.5"></i>
+                            No classes found. Create classes first from <a href="{{ route('sm-school.classes.index') }}" class="text-navy underline">SM School → Classes</a>.
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
-@endif
+
+    {{-- Table Pagination Footer --}}
+    @if($classes->hasPages())
+        <div class="px-4 py-3 border-t border-gray-200 bg-white">
+            {{ $classes->links() }}
+        </div>
+    @else
+        <div class="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <span>Showing <strong class="text-gray-700 font-semibold">{{ $classes->count() }}</strong> of <strong class="text-gray-700 font-semibold">{{ $classes->total() }}</strong> classes</span>
+            <span class="text-gray-400">Page 1 of 1</span>
+        </div>
+    @endif
+</div>
 
 {{-- Add Section Modal --}}
 <div id="addSectionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center" style="background:rgba(0,0,0,0.4);">

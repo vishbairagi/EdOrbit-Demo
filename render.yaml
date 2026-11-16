@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: edu-verse-demo
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: APP_KEY
+        value: base64:5ntNhQ6iHGcYs0JMPFRbYubE0cck/2QlUuq1gRcfwS0=
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: SESSION_DRIVER
+        value: file
+

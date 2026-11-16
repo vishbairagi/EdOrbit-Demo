@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Student extends Model
+class Student extends Model implements JWTSubject
 {
     protected $fillable = [
         'admission_no',
@@ -60,7 +61,7 @@ class Student extends Model
     /** Full name accessor */
     public function getFullNameAttribute(): string
     {
-        return trim("{$this->first_name} {$this->middle_name} {$this->last_name}");
+        return preg_replace('/\s+/', ' ', trim("{$this->first_name} {$this->middle_name} {$this->last_name}"));
     }
 
     /** Photo URL accessor */
@@ -140,9 +141,37 @@ class Student extends Model
         return $this->hasMany(LibraryCard::class);
     }
 
-    /** @return BelongsToMany<TransportRoute> */
+    /** @return HasMany<TransportRoute> */
     public function transportRoutes(): BelongsToMany
     {
         return $this->belongsToMany(TransportRoute::class, 'student_transport_route');
+    }
+
+    /** @return HasMany<StudentAttendance> */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(StudentAttendance::class);
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'user_type' => 'student',
+            'guard' => 'student',
+            'student_id' => $this->id,
+            'school_id' => $this->school_id,
+            'session_id' => $this->academic_session_id,
+            'class_id' => $this->school_class_id,
+            'section_id' => $this->section_id,
+            'user' => [
+                'id' => (string) $this->id,
+                'type' => 'student',
+            ],
+        ];
     }
 }

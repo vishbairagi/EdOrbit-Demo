@@ -43,13 +43,13 @@
         'overall_fail_label' => 'Fail',
     ], old('result_thresholds', $exam?->result_thresholds ?? []));
     $defaultGrades = [
-        ['percentage_from' => 0, 'percentage_to' => 40, 'grade' => 'F', 'status' => 'Fail'],
-        ['percentage_from' => 41, 'percentage_to' => 50, 'grade' => 'D', 'status' => 'Pass'],
-        ['percentage_from' => 51, 'percentage_to' => 60, 'grade' => 'C', 'status' => 'Pass'],
-        ['percentage_from' => 61, 'percentage_to' => 70, 'grade' => 'B', 'status' => 'Pass'],
-        ['percentage_from' => 71, 'percentage_to' => 80, 'grade' => 'B+', 'status' => 'Pass'],
-        ['percentage_from' => 81, 'percentage_to' => 90, 'grade' => 'A', 'status' => 'Pass'],
-        ['percentage_from' => 91, 'percentage_to' => 100, 'grade' => 'A+', 'status' => 'Pass'],
+        ['percentage_from' => 0, 'percentage_to' => 40, 'grade' => 'F', 'status' => 'Fail', 'remark' => 'Needs Improvement'],
+        ['percentage_from' => 41, 'percentage_to' => 50, 'grade' => 'D', 'status' => 'Pass', 'remark' => 'Satisfactory'],
+        ['percentage_from' => 51, 'percentage_to' => 60, 'grade' => 'C', 'status' => 'Pass', 'remark' => 'Satisfactory'],
+        ['percentage_from' => 61, 'percentage_to' => 70, 'grade' => 'B', 'status' => 'Pass', 'remark' => 'Good'],
+        ['percentage_from' => 71, 'percentage_to' => 80, 'grade' => 'B+', 'status' => 'Pass', 'remark' => 'Good'],
+        ['percentage_from' => 81, 'percentage_to' => 90, 'grade' => 'A', 'status' => 'Pass', 'remark' => 'Very Good'],
+        ['percentage_from' => 91, 'percentage_to' => 100, 'grade' => 'A+', 'status' => 'Pass', 'remark' => 'Excellent'],
     ];
     $oldGradeCriteria = old('grade_criteria');
     if (is_array($oldGradeCriteria) && isset($oldGradeCriteria['percentage_from'])) {
@@ -60,6 +60,7 @@
                 'percentage_to' => $oldGradeCriteria['percentage_to'][$index] ?? '',
                 'grade' => $oldGradeCriteria['grade'][$index] ?? '',
                 'status' => $oldGradeCriteria['status'][$index] ?? 'Pass',
+                'remark' => $oldGradeCriteria['remark'][$index] ?? '',
             ];
         }
     } else {
@@ -164,7 +165,7 @@
         <p class="mb-3 text-xs text-body">Percentage ranges and grades are saved with this exam. Values copied from an exam group can be edited here.</p>
         <div class="overflow-x-auto">
             <table class="w-full min-w-[650px] text-xs">
-                <thead class="bg-gray-50 text-left"><tr><th class="p-2">Percentage &gt;=</th><th class="p-2">Percentage &lt;=</th><th class="p-2">Assign Grade</th><th class="p-2">Status</th><th class="p-2">Action</th></tr></thead>
+                <thead class="bg-gray-50 text-left"><tr><th class="p-2">Percentage &gt;=</th><th class="p-2">Percentage &lt;=</th><th class="p-2">Assign Grade</th><th class="p-2">Status</th><th class="p-2">Remark</th><th class="p-2">Action</th></tr></thead>
                 <tbody id="exam-grade-rows" class="divide-y divide-gray-200"></tbody>
             </table>
         </div>
@@ -282,7 +283,7 @@
     }
 
     function renderGradeRows(rows) {
-        gradeContainer.innerHTML = rows.map(row => `<tr><td class="p-1"><input name="grade_criteria[percentage_from][]" type="number" min="0" max="100" step="0.01" required value="${escapeHtml(row.percentage_from)}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[percentage_to][]" type="number" min="0" max="100" step="0.01" required value="${escapeHtml(row.percentage_to)}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[grade][]" required maxlength="20" value="${escapeHtml(row.grade)}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[status][]" type="text" required maxlength="100" placeholder="Pass, Fail, etc." value="${escapeHtml(row.status || 'Pass')}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1 text-center"><button type="button" class="remove-exam-grade px-2 py-1 font-bold text-red-600" aria-label="Remove grade row">×</button></td></tr>`).join('');
+        gradeContainer.innerHTML = rows.map(row => `<tr><td class="p-1"><input name="grade_criteria[percentage_from][]" type="number" min="0" max="100" step="0.01" required value="${escapeHtml(row.percentage_from)}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[percentage_to][]" type="number" min="0" max="100" step="0.01" required value="${escapeHtml(row.percentage_to)}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[grade][]" required maxlength="20" value="${escapeHtml(row.grade)}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[status][]" type="text" required maxlength="100" placeholder="Pass, Fail, etc." value="${escapeHtml(row.status || 'Pass')}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[remark][]" type="text" maxlength="150" placeholder="Good, Excellent, etc." value="${escapeHtml(row.remark || '')}" class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1 text-center"><button type="button" class="remove-exam-grade px-2 py-1 font-bold text-red-600" aria-label="Remove grade row">×</button></td></tr>`).join('');
     }
 
     function applyThresholds(values) {
@@ -322,8 +323,9 @@
             percentage_to: row.querySelector('[name="grade_criteria[percentage_to][]"]').value,
             grade: row.querySelector('[name="grade_criteria[grade][]"]').value,
             status: row.querySelector('[name="grade_criteria[status][]"]').value,
+            remark: row.querySelector('[name="grade_criteria[remark][]"]').value,
         }));
-        rows.push({percentage_from: '', percentage_to: '', grade: '', status: 'Pass'});
+        rows.push({percentage_from: '', percentage_to: '', grade: '', status: 'Pass', remark: ''});
         renderGradeRows(rows);
     });
     document.addEventListener('click', event => {

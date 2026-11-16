@@ -3,342 +3,907 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login – Edu-Verse School Management</title>
-    <meta name="description" content="Login to Edu-Verse School Management System">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Demo Access Portal – EdOrbit School Management</title>
+    <meta name="description" content="EdOrbit Multi-School Management System Live Demo">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
-            display: flex;
-            background: linear-gradient(135deg, #1a1208 0%, #2d1f0e 40%, #1a1208 100%);
-            overflow: hidden;
-        }
-
-        /* Background pattern */
-        body::before {
-            content: '';
-            position: fixed; inset: 0;
-            background-image:
-                radial-gradient(circle at 20% 20%, rgba(180,122,66,0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(180,122,66,0.1) 0%, transparent 40%);
-            pointer-events: none;
-        }
-
-        .login-container {
-            display: flex; width: 100%; min-height: 100vh;
-        }
-
-        /* Left panel – decorative */
-        .login-left {
-            flex: 1;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 4rem;
+            background: #140d2b;
+            color: #1e293b;
             position: relative;
+            overflow-x: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        /* ── Rich Dashboard Mockup Background (Matches reference image) ── */
+        .bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
             overflow: hidden;
+            pointer-events: none;
+            background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.25) 0%, rgba(20, 13, 43, 0.98) 70%),
+                        linear-gradient(135deg, #180e33 0%, #0d0720 100%);
         }
-        .login-left::after {
-            content: '';
-            position: absolute; right: 0; top: 0; bottom: 0;
-            width: 1px;
-            background: linear-gradient(to bottom, transparent, rgba(180,122,66,0.4), transparent);
-        }
-        .brand-logo {
-            width: 80px; height: 80px;
-            background: linear-gradient(135deg, #B47A42, #D4A055);
-            border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 0 40px rgba(180,122,66,0.4);
-            animation: pulse-glow 3s ease-in-out infinite;
-        }
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 40px rgba(180,122,66,0.4); }
-            50% { box-shadow: 0 0 60px rgba(180,122,66,0.6); }
-        }
-        .brand-name {
-            font-size: 2.5rem; font-weight: 800;
-            color: #fff;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.5rem;
-        }
-        .brand-tagline {
-            color: rgba(232,221,213,0.6);
-            font-size: 1rem;
-            text-align: center;
-            max-width: 300px;
-            line-height: 1.6;
-        }
-        .features {
-            margin-top: 3rem;
-            display: flex; flex-direction: column; gap: 1rem;
-        }
-        .feature-item {
-            display: flex; align-items: center; gap: 0.75rem;
-            color: rgba(232,221,213,0.7);
-            font-size: 0.9rem;
-        }
-        .feature-dot {
-            width: 8px; height: 8px;
+
+        /* Ambient glowing orbs */
+        .glow-orb {
+            position: absolute;
             border-radius: 50%;
-            background: #B47A42;
-            flex-shrink: 0;
+            filter: blur(80px);
+            opacity: 0.45;
+        }
+        .glow-orb-1 { width: 500px; height: 500px; background: #6366f1; top: -100px; left: 10%; }
+        .glow-orb-2 { width: 450px; height: 450px; background: #8b5cf6; bottom: -80px; right: 15%; }
+        .glow-orb-3 { width: 350px; height: 350px; background: #ec4899; top: 40%; right: 5%; opacity: 0.25; }
+
+        /* Simulated Monitor & Screen Mockups in Background */
+        .mockup-grid {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.22;
+            transform: scale(0.96);
+            filter: saturate(1.2) contrast(1.1);
         }
 
-        /* Right panel – form */
-        .login-right {
-            width: 480px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 3rem 3.5rem;
-            background: rgba(255,252,247,0.05);
-            backdrop-filter: blur(20px);
-        }
-        .form-card {
-            width: 100%;
-        }
-        .form-title {
-            font-size: 1.75rem; font-weight: 700;
-            color: #fff;
-            margin-bottom: 0.5rem;
-        }
-        .form-subtitle {
-            color: rgba(232,221,213,0.55);
-            font-size: 0.875rem;
-            margin-bottom: 2rem;
+        .mockup-desktop {
+            width: 1080px;
+            height: 640px;
+            background: linear-gradient(145deg, #2a1b54, #1b103c);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+            display: flex;
+            overflow: hidden;
+            position: relative;
         }
 
-        .alert-error {
-            background: rgba(180,35,42,0.15);
-            border: 1px solid rgba(180,35,42,0.4);
+        .mockup-sidebar {
+            width: 220px;
+            background: rgba(15, 9, 32, 0.85);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .mockup-bar {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+        }
+        .mockup-bar.short { width: 60%; }
+        .mockup-bar.med { width: 80%; }
+
+        .mockup-main {
+            flex: 1;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .mockup-header-bar {
+            height: 48px;
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 10px;
-            padding: 0.875rem 1rem;
-            color: #ff8080;
-            font-size: 0.875rem;
-            display: flex; align-items: center; gap: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+        }
+
+        .mockup-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .mockup-card {
+            height: 90px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mockup-charts {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .mockup-chart-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 1rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        .mockup-bar-col {
+            flex: 1;
+            background: linear-gradient(to top, #6366f1, #818cf8);
+            border-radius: 4px;
+            opacity: 0.6;
+        }
+
+        .mockup-donut {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 20px solid #6366f1;
+            border-right-color: #ec4899;
+            border-bottom-color: #10b981;
+            margin: auto;
+            opacity: 0.55;
+        }
+
+        /* ── Foreground Center Portal ── */
+        .portal-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .portal-card {
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 2.25rem 2.5rem;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5),
+                        0 0 0 1px rgba(255, 255, 255, 0.9);
+            position: relative;
+        }
+
+        /* Top Logo & Header */
+        .portal-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-icon-wrap {
+            width: 68px;
+            height: 68px;
+            margin: 0 auto 0.75rem auto;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .portal-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.35rem;
+        }
+
+        .portal-subtitle {
+            font-size: 0.8125rem;
+            color: #64748b;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        /* ── Two Big Demo Action Buttons (Super Admin & School Admin) ── */
+        .demo-roles-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
             margin-bottom: 1.25rem;
         }
 
-        .field-group { margin-bottom: 1.25rem; }
-        .field-label {
-            display: block;
-            color: rgba(232,221,213,0.8);
-            font-size: 0.8125rem; font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        .field-input-wrap {
+        .demo-role-btn {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 0.875rem 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.4rem;
+            user-select: none;
             position: relative;
-        }
-        .field-input-wrap .field-icon {
-            position: absolute; left: 14px; top: 50%;
-            transform: translateY(-50%);
-            color: rgba(180,122,66,0.7);
-            width: 16px; height: 16px;
-            pointer-events: none;
-        }
-        .field-input {
-            width: 100%;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(232,221,213,0.15);
-            border-radius: 10px;
-            color: #fff;
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.9375rem;
-            transition: border-color 0.2s, background 0.2s;
             outline: none;
         }
-        .field-input::placeholder { color: rgba(232,221,213,0.3); }
-        .field-input:focus {
-            border-color: rgba(180,122,66,0.6);
-            background: rgba(255,255,255,0.1);
-        }
-        .toggle-pass {
-            position: absolute; right: 14px; top: 50%;
-            transform: translateY(-50%);
-            background: none; border: none; cursor: pointer;
-            color: rgba(232,221,213,0.4);
-            transition: color 0.2s;
-            padding: 0;
-        }
-        .toggle-pass:hover { color: rgba(180,122,66,0.8); }
 
-        .btn-login {
-            width: 100%;
-            padding: 0.875rem;
-            background: linear-gradient(135deg, #B47A42, #D4A055);
-            border: none; border-radius: 10px;
-            color: #1a1208; font-family: 'Outfit', sans-serif;
-            font-size: 1rem; font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 0.5rem;
-            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        .demo-role-btn:hover {
+            border-color: #a5b4fc;
+            background: #f5f7ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
         }
-        .btn-login:hover {
-            background: linear-gradient(135deg, #C88A52, #E4B065);
-            transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(180,122,66,0.4);
-        }
-        .btn-login:active { transform: translateY(0); }
 
-        .hint {
-            margin-top: 2rem;
-            padding: 1rem;
-            background: rgba(180,122,66,0.08);
-            border: 1px solid rgba(180,122,66,0.2);
+        .demo-role-btn.active {
+            border-color: #4f46e5;
+            background: #eef2ff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18),
+                        0 6px 16px rgba(79, 70, 229, 0.15);
+        }
+
+        .role-icon-box {
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
-        }
-        .hint-title {
-            color: rgba(180,122,66,0.9);
-            font-size: 0.75rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-        }
-        .hint-text {
-            color: rgba(232,221,213,0.5);
-            font-size: 0.8rem; line-height: 1.5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s;
         }
 
-        @media (max-width: 768px) {
-            .login-left { display: none; }
-            .login-right { width: 100%; padding: 2rem 1.5rem; }
+        .demo-role-btn.active .role-icon-box {
+            transform: scale(1.08);
+            border-color: #c7d2fe;
+            background: #ffffff;
+        }
+
+        .role-btn-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .demo-role-btn.active .role-btn-title {
+            color: #4338ca;
+        }
+
+        .role-btn-badge {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: #64748b;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 2px 7px;
+            border-radius: 999px;
+            line-height: 1.2;
+        }
+
+        .demo-role-btn.active .role-btn-badge {
+            background: #c7d2fe;
+            color: #3730a3;
+        }
+
+        /* Checkmark indicator for selected role */
+        .check-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4f46e5;
+            color: white;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .demo-role-btn.active .check-badge {
+            display: flex;
+        }
+
+        /* ── School Switcher (Shown when School Admin is selected) ── */
+        .school-select-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.75rem 0.875rem;
+            margin-bottom: 1.25rem;
+            animation: fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .school-select-label {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #475569;
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .school-select-dropdown {
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .school-select-dropdown:focus {
+            border-color: #4f46e5;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.25rem 0;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .divider span {
+            padding: 0 0.875rem;
+        }
+
+        /* ── Form Inputs ── */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.45rem;
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            color: #94a3b8;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 44px;
+            padding: 0 1rem 0 2.6rem;
+            font-size: 0.875rem;
+            font-family: inherit;
+            color: #0f172a;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        .pass-toggle-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .pass-toggle-btn:hover {
+            color: #475569;
+        }
+
+        .remember-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            font-size: 0.8125rem;
+            color: #475569;
+        }
+
+        .remember-label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-checkbox {
+            width: 16px;
+            height: 16px;
+            accent-color: #4f46e5;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        /* ── Big Purple Log In Button ── */
+        .btn-login-submit {
+            width: 100%;
+            height: 48px;
+            background: #4f46e5;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+            font-family: inherit;
+        }
+
+        .btn-login-submit:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
+        }
+
+        .btn-login-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Alert message */
+        .login-alert {
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 0.8125rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .login-alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+        .login-alert-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+        }
+
+        /* Active Credential Info Pill */
+        .credential-status {
+            margin-top: 0.875rem;
+            padding: 0.6rem 0.875rem;
+            background: #f1f5f9;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            line-height: 1.4;
+        }
+        .credential-status strong {
+            color: #1e293b;
+        }
+
+        /* ── Footer Below Card ── */
+        .portal-footer {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            font-size: 0.8125rem;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .portal-footer a {
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .portal-footer a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        .footer-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 520px) {
+            .portal-card {
+                padding: 1.75rem 1.25rem;
+            }
+            .demo-roles-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-<div class="login-container">
 
-    <!-- Left Panel -->
-    <div class="login-left">
-        <div class="brand-logo">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
-        </div>
-        <h1 class="brand-name">Edu-Verse</h1>
-        <p class="brand-tagline">Complete School Management System for the modern era</p>
+    <!-- Background Dashboard Silhouette (Matches reference image) -->
+    <div class="bg-canvas">
+        <div class="glow-orb glow-orb-1"></div>
+        <div class="glow-orb glow-orb-2"></div>
+        <div class="glow-orb glow-orb-3"></div>
 
-        <div class="features">
-            <div class="feature-item">
-                <div class="feature-dot"></div>
-                <span>Multi-School Management</span>
-            </div>
-            <div class="feature-item">
-                <div class="feature-dot"></div>
-                <span>Role-Based Access Control</span>
-            </div>
-            <div class="feature-item">
-                <div class="feature-dot"></div>
-                <span>Staff & Payroll Management</span>
-            </div>
-            <div class="feature-item">
-                <div class="feature-dot"></div>
-                <span>Student Academic Tracking</span>
-            </div>
-            <div class="feature-item">
-                <div class="feature-dot"></div>
-                <span>Attendance & Leave System</span>
+        <div class="mockup-grid">
+            <div class="mockup-desktop">
+                <div class="mockup-sidebar">
+                    <div class="mockup-bar" style="height:24px; width:70%; margin-bottom:1rem; background:rgba(255,255,255,0.25);"></div>
+                    <div class="mockup-bar short"></div>
+                    <div class="mockup-bar med"></div>
+                    <div class="mockup-bar"></div>
+                    <div class="mockup-bar med"></div>
+                    <div class="mockup-bar short"></div>
+                    <div class="mockup-bar" style="margin-top:auto;"></div>
+                </div>
+                <div class="mockup-main">
+                    <div class="mockup-header-bar">
+                        <div class="mockup-bar" style="width:160px;"></div>
+                        <div class="mockup-bar short" style="width:90px;"></div>
+                    </div>
+                    <div class="mockup-cards">
+                        <div class="mockup-card"></div>
+                        <div class="mockup-card"></div>
+                        <div class="mockup-card"></div>
+                        <div class="mockup-card"></div>
+                    </div>
+                    <div class="mockup-charts">
+                        <div class="mockup-chart-box">
+                            <div class="mockup-bar-col" style="height: 40%;"></div>
+                            <div class="mockup-bar-col" style="height: 75%;"></div>
+                            <div class="mockup-bar-col" style="height: 55%;"></div>
+                            <div class="mockup-bar-col" style="height: 90%;"></div>
+                            <div class="mockup-bar-col" style="height: 60%;"></div>
+                            <div class="mockup-bar-col" style="height: 85%;"></div>
+                            <div class="mockup-bar-col" style="height: 95%;"></div>
+                        </div>
+                        <div class="mockup-chart-box" style="display:flex; align-items:center; justify-content:center;">
+                            <div class="mockup-donut"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Right Panel (Form) -->
-    <div class="login-right">
-        <div class="form-card">
-            <h2 class="form-title">Welcome back 👋</h2>
-            <p class="form-subtitle">Sign in with your credentials to continue</p>
+    <!-- Main Floating Portal Card -->
+    <div class="portal-wrapper">
+        <div class="portal-card">
 
+            <!-- Card Header & App Logo -->
+            <div class="portal-header">
+                <div class="logo-icon-wrap">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                    </svg>
+                </div>
+                <h1 class="portal-title">Demo Access Portal</h1>
+                <p class="portal-subtitle">Choose a demo account below for instant 1-click access</p>
+            </div>
+
+            <!-- Error / Success Alert -->
             @if(session('error'))
-                <div class="alert-error">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    {{ session('error') }}
+                <div class="login-alert login-alert-error">
+                    <i data-lucide="alert-circle" style="width:16px; height:16px; flex-shrink:0;"></i>
+                    <span>{{ session('error') }}</span>
+                </div>
+            @endif
+            @if(session('success'))
+                <div class="login-alert login-alert-success">
+                    <i data-lucide="check-circle-2" style="width:16px; height:16px; flex-shrink:0;"></i>
+                    <span>{{ session('success') }}</span>
                 </div>
             @endif
 
+            <!-- ── ONLY 2 BUTTONS: Super Admin & School Admin (as explicitly requested) ── -->
+            <div class="demo-roles-grid">
+                <!-- 1. Super Admin Button -->
+                <button type="button" class="demo-role-btn active" id="btnSuperAdmin" onclick="selectRole('super_admin')">
+                    <div class="check-badge">
+                        <i data-lucide="check" style="width:11px; height:11px;"></i>
+                    </div>
+                    <div class="role-icon-box">👑</div>
+                    <span class="role-btn-title">Super Admin</span>
+                    <span class="role-btn-badge">All 6 Schools Access</span>
+                </button>
+
+                <!-- 2. School Admin Button -->
+                <button type="button" class="demo-role-btn" id="btnSchoolAdmin" onclick="selectRole('school_admin')">
+                    <div class="check-badge">
+                        <i data-lucide="check" style="width:11px; height:11px;"></i>
+                    </div>
+                    <div class="role-icon-box">🏫</div>
+                    <span class="role-btn-title">School Admin</span>
+                    <span class="role-btn-badge">Single School View</span>
+                </button>
+            </div>
+
+            <!-- School Admin Selector (visible when School Admin role is chosen) -->
+            <div class="school-select-panel" id="schoolSelectPanel" style="display: none;">
+                <div class="school-select-label">
+                    <span>Select School for Demo:</span>
+                    <span style="color:#4f46e5; font-size:0.625rem;">6 Schools Available</span>
+                </div>
+                <select class="school-select-dropdown" id="schoolDropdown" onchange="switchSchoolAdmin(this.value)">
+                    <option value="dps" data-user="admin@delhipublic.edu" data-school-id="1" selected>
+                        1. Delhi Public Global School, New Delhi (CBSE)
+                    </option>
+                    <option value="xavier" data-user="admin@stxaviers.edu" data-school-id="2">
+                        2. St. Xavier's International Academy, Mumbai (ICSE)
+                    </option>
+                    <option value="heritage" data-user="admin@heritagevalley.edu" data-school-id="3">
+                        3. The Heritage Valley School, Bengaluru (CBSE/IB)
+                    </option>
+                    <option value="oakridge" data-user="admin@oakridge.edu" data-school-id="4">
+                        4. Oakridge International School, Hyderabad (Cambridge)
+                    </option>
+                    <option value="silverbells" data-user="admin@silverbells.edu" data-school-id="5">
+                        5. Silver Bells High School, Ahmedabad (CBSE)
+                    </option>
+                    <option value="greenwood" data-user="admin@greenwood.edu" data-school-id="6">
+                        6. Greenwood Convent School, Jaipur (CBSE)
+                    </option>
+                </select>
+            </div>
+
+            <div class="divider">
+                <span>or enter credentials</span>
+            </div>
+
+            <!-- Login Form -->
             <form method="POST" action="{{ route('login.post') }}" id="loginForm">
                 @csrf
+                <input type="hidden" name="demo_role" id="demoRoleInput" value="super_admin">
+                <input type="hidden" name="school_id" id="schoolIdInput" value="1">
 
-                <div class="field-group">
-                    <label class="field-label" for="login">Username / Email / Phone</label>
-                    <div class="field-input-wrap">
-                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <div class="form-group">
+                    <label class="form-label" for="login">Username or Email Address</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">
+                            <i data-lucide="mail" style="width:16px; height:16px;"></i>
+                        </span>
                         <input
                             type="text"
                             id="login"
                             name="login"
-                            class="field-input"
-                            placeholder="Enter username, email or phone"
-                            value="{{ old('login') }}"
+                            class="form-input"
+                            placeholder="Username or email address"
+                            value="superadmin@edorbit.com"
                             required
                             autocomplete="username"
                         >
                     </div>
                 </div>
 
-                <div class="field-group">
-                    <label class="field-label" for="password">Password</label>
-                    <div class="field-input-wrap">
-                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">
+                            <i data-lucide="lock" style="width:16px; height:16px;"></i>
+                        </span>
                         <input
                             type="password"
                             id="password"
                             name="password"
-                            class="field-input"
-                            placeholder="Enter your password"
+                            class="form-input"
+                            placeholder="Password"
+                            value="password123"
                             required
                             autocomplete="current-password"
                         >
-                        <button type="button" class="toggle-pass" id="togglePass" aria-label="Toggle password visibility">
-                            <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <button type="button" class="pass-toggle-btn" id="togglePassBtn" aria-label="Toggle password visibility">
+                            <i data-lucide="eye" id="eyeIcon" style="width:16px; height:16px;"></i>
                         </button>
                     </div>
                 </div>
 
-                <button type="submit" class="btn-login" id="submitBtn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    Sign In
+                <div class="remember-row">
+                    <label class="remember-label">
+                        <input type="checkbox" name="remember" class="remember-checkbox" checked>
+                        <span>Remember Me</span>
+                    </label>
+                    <span id="roleAccessScope" style="font-size:0.75rem; color:#4f46e5; font-weight:600;">
+                        Full Multi-School Access
+                    </span>
+                </div>
+
+                <button type="submit" class="btn-login-submit" id="btnSubmit">
+                    <span>Log In</span>
+                    <i data-lucide="arrow-right" style="width:18px; height:18px;"></i>
                 </button>
             </form>
 
-            <div class="hint">
-                <div class="hint-title">🔐 Login Roles</div>
-                <div class="hint-text">
-                    • <strong style="color:rgba(180,122,66,0.9)">Super Admin</strong> – Full access to all schools<br>
-                    • <strong style="color:rgba(180,122,66,0.9)">Principal / Admin</strong> – School-level management<br>
-                    • <strong style="color:rgba(180,122,66,0.9)">Staff</strong> – Access based on assigned role permissions
+            <!-- Credential Info Pill -->
+            <div class="credential-status" id="credentialStatusPill">
+                <i data-lucide="shield-check" style="width:15px; height:15px; color:#4f46e5; flex-shrink:0;"></i>
+                <div id="credentialStatusText">
+                    <strong>Super Admin Mode:</strong> Master oversight of all 6 schools, fees, students & configuration.
                 </div>
             </div>
+
+        </div>
+
+        <!-- Footer Links Below Card -->
+        <div class="portal-footer">
+            <a href="javascript:void(0)" onclick="alert('Demo Mode: Click Super Admin or School Admin above and press Log In. No external database server required!')">
+                <i data-lucide="help-circle" style="width:14px; height:14px;"></i>
+                Help Document
+            </a>
+            <span class="footer-dot"></span>
+            <a href="javascript:void(0)" onclick="selectRole('super_admin')">
+                <i data-lucide="layers" style="width:14px; height:14px;"></i>
+                Super Admin
+            </a>
+            <span class="footer-dot"></span>
+            <a href="javascript:void(0)" onclick="selectRole('school_admin')">
+                <i data-lucide="building-2" style="width:14px; height:14px;"></i>
+                School Admin
+            </a>
         </div>
     </div>
-</div>
 
-<script>
-    lucide.createIcons();
+    <script>
+        lucide.createIcons();
 
-    // Toggle password visibility
-    const togglePass = document.getElementById('togglePass');
-    const passInput  = document.getElementById('password');
-    const eyeIcon    = document.getElementById('eyeIcon');
+        // ── Credentials Presets ──
+        const CREDENTIALS = {
+            super_admin: {
+                username: 'superadmin@edorbit.com',
+                password: 'password123',
+                scopeText: 'Full Multi-School Access',
+                statusHtml: '<strong>Super Admin Mode:</strong> Master oversight across all 6 schools, aggregate fees, students & system settings.'
+            },
+            school_admin: {
+                username: 'admin@delhipublic.edu',
+                password: 'password123',
+                scopeText: 'Single School Scoped Access',
+                statusHtml: '<strong>School Admin Mode:</strong> Restricted strictly to viewing and managing this specific school.'
+            }
+        };
 
-    togglePass.addEventListener('click', () => {
-        const isText = passInput.type === 'text';
-        passInput.type = isText ? 'password' : 'text';
-        eyeIcon.innerHTML = isText
-            ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
-            : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-    });
+        const btnSuper = document.getElementById('btnSuperAdmin');
+        const btnSchool = document.getElementById('btnSchoolAdmin');
+        const schoolSelectPanel = document.getElementById('schoolSelectPanel');
+        const schoolDropdown = document.getElementById('schoolDropdown');
+        const loginInput = document.getElementById('login');
+        const passInput = document.getElementById('password');
+        const demoRoleInput = document.getElementById('demoRoleInput');
+        const schoolIdInput = document.getElementById('schoolIdInput');
+        const roleAccessScope = document.getElementById('roleAccessScope');
+        const credentialStatusText = document.getElementById('credentialStatusText');
 
-    // Submit loading state
-    document.getElementById('loginForm').addEventListener('submit', function () {
-        const btn = document.getElementById('submitBtn');
-        btn.innerHTML = '<svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Signing in...';
-        btn.disabled = true;
-    });
-</script>
+        // ── Role Selection Handler ──
+        function selectRole(role) {
+            demoRoleInput.value = role;
+
+            if (role === 'super_admin') {
+                btnSuper.classList.add('active');
+                btnSchool.classList.remove('active');
+                schoolSelectPanel.style.display = 'none';
+
+                loginInput.value = CREDENTIALS.super_admin.username;
+                passInput.value = CREDENTIALS.super_admin.password;
+                roleAccessScope.innerText = CREDENTIALS.super_admin.scopeText;
+                credentialStatusText.innerHTML = CREDENTIALS.super_admin.statusHtml;
+                schoolIdInput.value = '1';
+            } else {
+                btnSchool.classList.add('active');
+                btnSuper.classList.remove('active');
+                schoolSelectPanel.style.display = 'block';
+
+                // Read selected school admin from dropdown
+                const selectedOption = schoolDropdown.options[schoolDropdown.selectedIndex];
+                loginInput.value = selectedOption.getAttribute('data-user') || CREDENTIALS.school_admin.username;
+                passInput.value = CREDENTIALS.school_admin.password;
+                schoolIdInput.value = selectedOption.getAttribute('data-school-id') || '1';
+                roleAccessScope.innerText = 'Scoped to ' + selectedOption.text.split('(')[0].trim();
+                credentialStatusText.innerHTML = '<strong>School Admin Mode:</strong> Access strictly restricted to <em>' + selectedOption.text.split('(')[0].trim() + '</em>.';
+            }
+
+            // Quick focus pulse
+            loginInput.focus();
+            loginInput.select();
+        }
+
+        // ── Switch School Admin from Dropdown ──
+        function switchSchoolAdmin(val) {
+            const selectedOption = schoolDropdown.options[schoolDropdown.selectedIndex];
+            const email = selectedOption.getAttribute('data-user');
+            const sId = selectedOption.getAttribute('data-school-id');
+
+            loginInput.value = email;
+            passInput.value = 'password123';
+            schoolIdInput.value = sId;
+
+            roleAccessScope.innerText = 'Scoped to ' + selectedOption.text.split('(')[0].trim();
+            credentialStatusText.innerHTML = '<strong>School Admin Mode:</strong> Access strictly restricted to <em>' + selectedOption.text.split('(')[0].trim() + '</em>.';
+        }
+
+        // ── Toggle Password Visibility ──
+        const togglePassBtn = document.getElementById('togglePassBtn');
+        const eyeIcon = document.getElementById('eyeIcon');
+        togglePassBtn.addEventListener('click', () => {
+            const isPassword = passInput.type === 'password';
+            passInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+            lucide.createIcons();
+        });
+
+        // ── Loading state on submission ──
+        document.getElementById('loginForm').addEventListener('submit', () => {
+            const btn = document.getElementById('btnSubmit');
+            btn.innerHTML = '<svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Signing In...';
+            btn.style.opacity = '0.85';
+            btn.style.pointerEvents = 'none';
+        });
+    </script>
 </body>
 </html>

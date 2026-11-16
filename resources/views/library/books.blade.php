@@ -33,29 +33,50 @@
     </div>
 </div>
 
+{{-- ══ Bulk Delete Toolbar ══ --}}
+<div id="bulkToolbar" class="hidden mb-3 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 animate-pulse-once">
+    <span id="selectedCount" class="text-sm font-semibold text-red-700">0 selected</span>
+    <form id="bulkDeleteForm" method="POST" action="{{ route('library.books.bulk-destroy') }}" onsubmit="return confirmBulkDelete()">
+        @csrf
+        <div id="bulkIdsContainer"></div>
+        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Selected
+        </button>
+    </form>
+    <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 underline">Clear</button>
+</div>
+
 {{-- Books Table --}}
 <div class="bg-card rounded-xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-sm" id="booksTable">
             <thead>
-                <tr style="background:#B47A42;">
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">#</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Title</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Author</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Subject</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Rack No.</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Book No.</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">ISBN</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Price</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Qty</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Issued</th>
-                    <th class="text-left px-4 py-3 text-white font-semibold text-xs">Actions</th>
+                <tr class="bg-navy">
+                    <th class="px-4 py-2 w-10 text-center">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"
+                            class="w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600" title="Select All">
+                    </th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">#</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Title</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Author</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Subject</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Rack No.</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Book No.</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">ISBN</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Price</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Qty</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Issued</th>
+                    <th class="text-left px-4 py-3 text-white font-semibold text-xs uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($books as $i => $book)
-                <tr class="hover:bg-orange-50/30 transition book-row">
-                    <td class="px-4 py-3 text-body text-xs">{{ $i + 1 }}</td>
+                <tr class="hover:bg-orange-50/30 transition book-row" data-id="{{ $book->id }}">
+                    <td class="px-4 py-2 text-center w-10">
+                        <input type="checkbox" value="{{ $book->id }}" onchange="updateBulkToolbar()"
+                            class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
+                    </td>
+                    <td class="px-4 py-3 text-body text-xs">{{ $books->firstItem() ? ($books->firstItem() + $i) : ($i + 1) }}</td>
                     <td class="px-4 py-3 font-medium text-heading">{{ $book->title }}</td>
                     <td class="px-4 py-3 text-body">{{ $book->author ?? '—' }}</td>
                     <td class="px-4 py-3 text-body">{{ $book->subject ?? '—' }}</td>
@@ -98,7 +119,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="11" class="px-4 py-10 text-center text-body text-sm">
+                    <td colspan="12" class="px-4 py-10 text-center text-body text-sm">
                         No books found. <a href="{{ route('library.books.create') }}" style="color:#B47A42;" class="font-semibold">Add the first book →</a>
                     </td>
                 </tr>
@@ -106,6 +127,11 @@
             </tbody>
         </table>
     </div>
+    @if(method_exists($books, 'links'))
+        <div class="p-2 border-t border-gray-100">
+            {{ $books->links() }}
+        </div>
+    @endif
 </div>
 
 <script>

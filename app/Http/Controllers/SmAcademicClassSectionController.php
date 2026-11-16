@@ -30,35 +30,50 @@ class SmAcademicClassSectionController extends Controller
     {
         [$school, $session] = $this->getSchoolAndSession();
 
-        $query = SchoolClass::with(['sections'])
+        $query = SchoolClass::with(['sections', 'classGroup'])
             ->where('school_id', $school->id)
             ->where('academic_session_id', $session->id);
 
         if ($request->filled('search')) {
-            $kw = $request->search;
-            $query->where('name', 'like', "%{$kw}%");
+            $kw = trim($request->search);
+            $query->where(function ($q) use ($kw) {
+                $q->where('name', 'like', "%{$kw}%")
+                  ->orWhereHas('sections', function ($sq) use ($kw) {
+                      $sq->where('name', 'like', "%{$kw}%");
+                  })
+                  ->orWhereHas('classGroup', function ($gq) use ($kw) {
+                      $gq->where('name', 'like', "%{$kw}%");
+                  });
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [5, 10, 25, 50, 100], true)) {
+            $perPage = 10;
         }
 
         $classes = $query->orderBy('order')
             ->orderBy('name')
-            ->get()
-            ->map(function ($class) {
-                $class->male_students = Student::where('school_class_id', $class->id)
-                    ->where('status', 'Active')
-                    ->where('gender', 'Male')
-                    ->count();
+            ->paginate($perPage)
+            ->withQueryString();
 
-                $class->female_students = Student::where('school_class_id', $class->id)
-                    ->where('status', 'Active')
-                    ->where('gender', 'Female')
-                    ->count();
+        $classes->through(function ($class) {
+            $class->male_students = Student::where('school_class_id', $class->id)
+                ->where('status', 'Active')
+                ->where('gender', 'Male')
+                ->count();
 
-                $class->total_students = Student::where('school_class_id', $class->id)
-                    ->where('status', 'Active')
-                    ->count();
+            $class->female_students = Student::where('school_class_id', $class->id)
+                ->where('status', 'Active')
+                ->where('gender', 'Female')
+                ->count();
 
-                return $class;
-            });
+            $class->total_students = Student::where('school_class_id', $class->id)
+                ->where('status', 'Active')
+                ->count();
+
+            return $class;
+        });
 
         return view('sm-academic.class-sections.index', compact('school', 'session', 'classes'));
     }

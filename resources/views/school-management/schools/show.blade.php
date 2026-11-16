@@ -43,8 +43,18 @@
                     Inactive
                 </span>
             @endif
-        </div>
         <div class="p-6">
+            @if($school->logo_url)
+                <div class="mb-6 flex items-center gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                    <div class="w-20 h-20 bg-white rounded-xl p-2 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden">
+                        <img src="{{ $school->logo_url }}" alt="{{ $school->name }} Logo" class="w-full h-full object-contain">
+                    </div>
+                    <div>
+                        <h4 class="text-base font-bold text-heading">{{ $school->name }}</h4>
+                        <p class="text-xs text-gray-500 mt-0.5">Official School Logo</p>
+                    </div>
+                </div>
+            @endif
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <div class="sm:col-span-1">
                     <dt class="text-sm font-medium text-gray-500">School Name</dt>

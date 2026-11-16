@@ -4,13 +4,16 @@
 
 @section('content')
 
-{{-- Page Header --}}
-<div class="bg-navy rounded-xl shadow-md px-5 py-3 flex items-center justify-between mb-6">
-    <div class="flex items-center text-white font-bold text-base">
-        Subject: {{ $subject->name }} @if($subject->code) ({{ $subject->code }}) @endif, Class: {{ $subject->schoolClass?->name ?? '—' }}
+{{-- Top Header Section --}}
+<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <div>
+        <h3 class="text-base font-bold text-heading">Subject: {{ $subject->name }} @if($subject->code) ({{ $subject->code }}) @endif</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Class: {{ $subject->schoolClass?->name ?? '—' }} &nbsp;·&nbsp; Session: {{ $session->name ?? 'Current Session' }}</p>
     </div>
-    <a href="{{ route('academic.assign-subjects.index') }}" class="inline-flex items-center px-3 py-1.5 border border-white text-white text-xs font-semibold rounded-lg hover:bg-white hover:text-navy transition-colors">
-        <i data-lucide="tag" class="w-3.5 h-3.5 mr-1"></i> View Subjects
+    <a href="{{ route('academic.assign-subjects.index') }}"
+       class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-2xs">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5 mr-1 text-gray-600"></i>
+        Back to Subjects
     </a>
 </div>
 

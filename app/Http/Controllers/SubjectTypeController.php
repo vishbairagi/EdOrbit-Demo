@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\AcademicSession;
 use App\Models\School;
+use App\Models\Subject;
 use App\Models\SubjectType;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SubjectTypeController extends Controller
@@ -24,16 +26,97 @@ class SubjectTypeController extends Controller
         return [$school, $session];
     }
 
-    public function index()
+    public function index(Request $request)
     {
         [$school, $session] = $this->getSchoolAndSession();
 
-        $subjectTypes = SubjectType::where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->orderBy('name')
-            ->get();
+        // ── Base Query: strictly scoped to school and session ──
+        $query = SubjectType::withCount(['subjects' => function ($q) use ($school, $session) {
+            $q->where('school_id', $school->id)->where('academic_session_id', $session->id);
+        }])
+        ->where('school_id', $school->id)
+        ->where('academic_session_id', $session->id);
 
-        return view('sm-academic.subject-types.index', compact('school', 'session', 'subjectTypes'));
+        if ($request->filled('search')) {
+            $kw = $request->search;
+            $query->where(function ($q) use ($kw) {
+                $q->where('name', 'like', "%{$kw}%")
+                  ->orWhere('description', 'like', "%{$kw}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [5, 10, 15, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
+        $subjectTypes = $query->orderBy('name')->paginate($perPage)->withQueryString();
+
+        // ── Analytics for Particular Session (Whole Session Scope) ──
+        $allSessionTypes = SubjectType::with(['subjects' => function ($q) use ($school, $session) {
+            $q->where('school_id', $school->id)
+              ->where('academic_session_id', $session->id)
+              ->with('schoolClass');
+        }])
+        ->where('school_id', $school->id)
+        ->where('academic_session_id', $session->id)
+        ->get();
+
+        $totalSessionSubjects = Subject::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->count();
+
+        $totalTypesCount = $allSessionTypes->count();
+        $activeTypesCount = $allSessionTypes->where('is_active', true)->count();
+        $inactiveTypesCount = $allSessionTypes->where('is_active', false)->count();
+
+        $totalAssignedSubjects = $allSessionTypes->sum(fn ($t) => $t->subjects->count());
+        $untypedSubjectsCount = max(0, $totalSessionSubjects - $totalAssignedSubjects);
+        $categorizedRate = $totalSessionSubjects > 0 ? round(($totalAssignedSubjects / $totalSessionSubjects) * 100) : 0;
+        $typesWithSubjectsCount = $allSessionTypes->filter(fn ($t) => $t->subjects->count() > 0)->count();
+        $typesCoveragePercent = $totalTypesCount > 0 ? round(($typesWithSubjectsCount / $totalTypesCount) * 100) : 0;
+
+        $typesAnalysis = $allSessionTypes->map(function ($t) use ($totalSessionSubjects) {
+            $subjects = $t->subjects;
+            $classes = $subjects->pluck('schoolClass.name')->filter()->unique()->values()->all();
+
+            return [
+                'id' => $t->id,
+                'name' => $t->name,
+                'description' => $t->description,
+                'is_active' => $t->is_active,
+                'subjects_count' => $subjects->count(),
+                'percentage' => $totalSessionSubjects > 0 ? round(($subjects->count() / $totalSessionSubjects) * 100, 1) : 0,
+                'classes' => $classes,
+                'subjects' => $subjects,
+            ];
+        })->sortByDesc('subjects_count')->values();
+
+        $mostUsedType = $typesAnalysis->first();
+
+        $analytics = [
+            'totalTypes' => $totalTypesCount,
+            'activeTypes' => $activeTypesCount,
+            'inactiveTypes' => $inactiveTypesCount,
+            'totalSessionSubjects' => $totalSessionSubjects,
+            'totalAssignedSubjects' => $totalAssignedSubjects,
+            'untypedSubjects' => $untypedSubjectsCount,
+            'categorizedRate' => $categorizedRate,
+            'typesWithSubjects' => $typesWithSubjectsCount,
+            'typesCoveragePercent' => $typesCoveragePercent,
+            'mostUsedType' => $mostUsedType,
+            'typesAnalysis' => $typesAnalysis,
+        ];
+
+        return view('sm-academic.subject-types.index', compact('school', 'session', 'subjectTypes', 'analytics', 'perPage'));
     }
 
     public function store(Request $request)
@@ -41,8 +124,17 @@ class SubjectTypeController extends Controller
         [$school, $session] = $this->getSchoolAndSession();
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100',
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('subject_types', 'name')
+                    ->where('school_id', $school->id)
+                    ->where('academic_session_id', $session->id),
+            ],
             'description' => 'nullable|string|max:255',
+        ], [
+            'name.unique' => 'Subject type with this name already exists in session ' . $session->name . '.',
         ]);
 
         $validated['school_id']           = $school->id;
@@ -50,18 +142,28 @@ class SubjectTypeController extends Controller
         $validated['is_active']           = true;
         SubjectType::create($validated);
 
-        return redirect()->route('academic.subject-types.index')->with('success', 'Subject type created successfully.');
+        return redirect()->route('academic.subject-types.index')->with('success', 'Subject type created successfully for session ' . $session->name . '.');
     }
 
     public function update(Request $request, SubjectType $subjectType)
     {
         [$school, $session] = $this->getSchoolAndSession();
-        abort_if($subjectType->school_id !== $school->id, 403);
+        abort_if($subjectType->school_id !== $school->id || $subjectType->academic_session_id !== $session->id, 403);
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100',
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('subject_types', 'name')
+                    ->where('school_id', $school->id)
+                    ->where('academic_session_id', $session->id)
+                    ->ignore($subjectType->id),
+            ],
             'description' => 'nullable|string|max:255',
-            'is_active'   => 'boolean',
+            'is_active'   => 'nullable',
+        ], [
+            'name.unique' => 'Subject type with this name already exists in session ' . $session->name . '.',
         ]);
         $validated['is_active'] = $request->has('is_active');
         $subjectType->update($validated);
@@ -72,7 +174,7 @@ class SubjectTypeController extends Controller
     public function updateStatus(Request $request, SubjectType $subjectType)
     {
         [$school, $session] = $this->getSchoolAndSession();
-        abort_if($subjectType->school_id !== $school->id, 403);
+        abort_if($subjectType->school_id !== $school->id || $subjectType->academic_session_id !== $session->id, 403);
 
         $validated = $request->validate([
             'is_active' => 'required|boolean',
@@ -85,7 +187,7 @@ class SubjectTypeController extends Controller
     public function destroy(SubjectType $subjectType)
     {
         [$school, $session] = $this->getSchoolAndSession();
-        abort_if($subjectType->school_id !== $school->id, 403);
+        abort_if($subjectType->school_id !== $school->id || $subjectType->academic_session_id !== $session->id, 403);
         $subjectType->delete();
 
         return redirect()->route('academic.subject-types.index')->with('success', 'Subject type deleted.');
@@ -185,13 +287,19 @@ class SubjectTypeController extends Controller
         return redirect()->route('academic.subject-types.index')
             ->with('success', "{$imported} subject type(s) imported for session {$session->name}. {$skipped} skipped.");
     }
+
     public function bulkDestroy(Request $request)
     {
+        [$school, $session] = $this->getSchoolAndSession();
         $ids = $request->input('ids', []);
         if (empty($ids)) {
             return back()->with('error', 'No items selected.');
         }
-        $deleted = \App\Models\SubjectType::whereIn('id', $ids)->delete();
-        return back()->with('success', "$deleted record(s) deleted successfully.");
+        $deleted = SubjectType::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->whereIn('id', $ids)
+            ->delete();
+
+        return back()->with('success', "$deleted record(s) deleted successfully for session {$session->name}.");
     }
 }

@@ -120,3 +120,112 @@ ye ab to admin panel ka kaam tha
 ab esme frontend ka kaam krna h 
 ADMIN panel me website krke menu bnana jha se frontent ka sara kaam editable hoga 
 frontent me home screen bnao pahle and uska website menu  submenu ho jisme home page ke andar her section jese header text , button text etc boddy footer sab change ho
+
+
+
+
+
+
+
+
+noticeboard krke submenu esme tabke dikhe jismne Table columns notice title , link to (none, attachment , url ) , is active , created date , added by krke add kro 
+notice board session wise seprate with school a
+and add new notice board me model dialog pop kholo jisme  * Notice Title: , * Class: (dropdown me us sessoin ki classes aaye ) , then clas section (select classka section aaye ) , notice description , link to (drop down mee none , attashment (esme pdf , docx , image ..etc type documents are allow ) , url ) , then perticular link to ka field , sstatus approved/active , inactive 
+
+
+
+
+improvement :-
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+setting ==> dashboard tab me student and parent  ko kya kya data dikhana h uske upar rahegi sab abhi esko rehne do ye remaining feature h !!
+
+
+
+
+
+
+
+payment mathod me save krta hu pr jab bhi dubara server run krta hu to payment method unable dikhte h 
+
+esko check kro 
+eska data sahi save nhi ho rha h 
+
+
+abhi tak examination menu tak improvement huaa h 
+
+
+
+
+
+
+
+
+complete : 
+
+
+/sm-student/students : yeha agar koi student delete kr dete h to uske dwara bnaya gya sara data delete krdena for example : accouting invoices , transport invoices , books issue , library cards , transfer student  tablle me , promot student table me student login academic manue me   examination manue me , ussko assign id's..etc 
+ sidhi baar yu h perticular deleted student ke liye jo bhi data bna tha sab delete kr dena that's it 
+
+/sm-school/settings : yeha pe new tab bnana trash krke jaha woh student with data dikhna chaiye agle 30 din tak and recover krne option dena chaiye after 30 din ke baad uska wajood data base se remove ho jayega permanatly 
+
+
+
+
+setting==> live classes me google meet ka enable disable ka button dena h (instruction bhi dena kese kya krna h steps https://console.cloud.google.com/)
+eske enable ke baad us session me google meet se live  class le sakte h teacher
+live class ka data bhi session wise and school wise seprate rahega 
+eske enable ke baad administrator me  liveclass setting krke submenu bnana jisme
+table honi chaiye staff ki jis staff ko class asssign ho  sirf usko dikhegi 
+and table me normal data hone ke baad last wala column action ka hoga jisme 
+add credential edit , and delete ka option hona chaiye 
+In after click  add credential then show model dialog pop in this model dialog pop create these textfield : Google Client ID: , Google Client Secret: ,Google Redirect URI: , Google Access Token (Auto-generated or Manual):, Google Refresh Token (Auto-generated or Manual): , google connect ka button dena se ye access token banega and ye data save kr lena h , Google Redirect URI ek bydefault page bna lena h uska url ye rakhna hamesha yeha koi usko change nhi krega wahi url yeha https://console.cloud.google.com/ lgna chiaye 
+i thing understand
+helping pdf also given 
+
+
+and after click edit can edit all of things given when create it . and delete can delete all data of these crendentials .
+
+
+
+
+
+
+
+Setting me sms integrate krna h jitne bhi sms provider h india ke sab integrate krne h and sms template bnane h ye setting session wise and school wise seprate rahegi esme agar koi bhi sms provider ka data key secrate key..etc fill krte h to woh sirf usi school ke session me work kregi dusre session ke liye session change krke dubara data fill kro 
+
+
+sm-school/settings esme new tab bnana sms template krke jha email templates ke jase sms ke template bnana as it 
+and 
+sm-school/settings esme new tab sms provider ki dropdown me select krwana and usko jo jo data need ho uske field fill krwana and save kr dena then woh usi school ke session me work kregi and right side me uska setup btana jab dropdown me jis provider ko select kiya ho uske setup ke baare me btana usme kya kya fill krna h kese kya krna all steps with links documentation ..etc
+
+

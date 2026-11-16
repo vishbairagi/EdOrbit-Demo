@@ -8,6 +8,7 @@ use App\Models\AcademicSession;
 use App\Models\School;
 use App\Models\StudentCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SchoolController extends Controller
 {
@@ -38,7 +39,13 @@ class SchoolController extends Controller
 
     public function store(StoreSchoolRequest $request)
     {
-        $school = School::create($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo')->store('schools/logos', 'public');
+        }
+
+        $school = School::create($data);
 
         // Create a default academic session for the new school
         $year = now()->year;
@@ -69,13 +76,43 @@ class SchoolController extends Controller
 
     public function update(UpdateSchoolRequest $request, School $school)
     {
-        $school->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->boolean('remove_logo')) {
+            if ($school->logo && !filter_var($school->logo, FILTER_VALIDATE_URL)) {
+                if (str_starts_with($school->logo, 'uploads/')) {
+                    @unlink(public_path($school->logo));
+                } else {
+                    Storage::disk('public')->delete($school->logo);
+                }
+            }
+            $data['logo'] = null;
+        } elseif ($request->hasFile('logo')) {
+            if ($school->logo && !filter_var($school->logo, FILTER_VALIDATE_URL)) {
+                if (str_starts_with($school->logo, 'uploads/')) {
+                    @unlink(public_path($school->logo));
+                } else {
+                    Storage::disk('public')->delete($school->logo);
+                }
+            }
+            $data['logo'] = $request->file('logo')->store('schools/logos', 'public');
+        }
+
+        $school->update($data);
 
         return redirect()->route('school-management.schools.index')->with('success', 'School updated successfully.');
     }
 
     public function destroy(School $school)
     {
+        if ($school->logo && !filter_var($school->logo, FILTER_VALIDATE_URL)) {
+            if (str_starts_with($school->logo, 'uploads/')) {
+                @unlink(public_path($school->logo));
+            } else {
+                Storage::disk('public')->delete($school->logo);
+            }
+        }
+
         $school->delete();
 
         return redirect()->route('school-management.schools.index')->with('success', 'School deleted successfully.');

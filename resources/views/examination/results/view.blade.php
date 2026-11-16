@@ -1,44 +1,80 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('header', 'Generated Exam Results')
 
 @section('content')
-<style>
-    @media print {
-        @page { size: A4 portrait; margin: 0; }
-        body { 
-            background: white !important; 
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact;
-            display: block !important;
-            height: auto !important;
-            overflow: visible !important;
-            margin: 0; padding: 0;
+@php
+    // Subject status is always evaluated live against the exam's current pass threshold/labels,
+    // so changing the threshold in Result Settings applies to existing results too.
+    $subjectStatusOf = function ($item) use ($exam) {
+        $t = $exam->result_thresholds ?? [];
+        $max = (float) ($item->paper->maximum_marks ?? 0);
+        if (($t['show_subject_status'] ?? false) && $exam->exam_type === 'marks' && $item->obtained_marks !== null && $max > 0) {
+            $pct = ((float) $item->obtained_marks / $max) * 100;
+            return $pct >= (float) ($t['subject_pass_threshold'] ?? 0)
+                ? ($t['subject_pass_label'] ?? 'Pass')
+                : ($t['subject_fail_label'] ?? 'Fail');
         }
-        
-        /* Hide everything except print container */
-        body > aside, body > main > header, #ui-container { display: none !important; }
-        
-        /* Show print container */
-        #print-container { display: block !important; }
+        return $item->status;
+    };
+@endphp
+<style>
+    .result-card {
+        background: #fff; color: #000; box-sizing: border-box;
+        width: 100%; max-width: 210mm; margin: 0 auto 24px auto; padding: 10mm 12mm;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 11px; line-height: 1.4;
+    }
+    .rc-header { text-align: center; }
+    .rc-school { font-size: 12px; font-weight: 700; margin: 0 0 2px 0; }
+    .rc-contact { font-size: 7px; margin-bottom: 1px; }
+    .rc-divider { border-bottom: 1px solid #d1d5db; margin: 8px 0 12px 0; }
+    .rc-title { text-align: center; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; margin-bottom: 12px; }
 
-        /* Print single or all logic */
+    .rc-details { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+    .rc-details-col { flex: 1; }
+    .rc-row { border-bottom: 1px solid #e5e7eb; padding: 3px 0 4px 0; font-size: 11px; }
+    .rc-split { display: flex; justify-content: space-between; }
+    .rc-photo { width: 70px; height: 80px; flex-shrink: 0; border: 1px solid #d1d5db; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #6b7280; }
+    .rc-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+    table.rc-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; margin-bottom: 24px; }
+    table.rc-table thead tr, table.rc-table thead th, table.rc-table tbody tr, table.rc-table tbody td {
+        background: #fff !important; color: #000 !important; border: 1px solid #000 !important;
+        padding: 3px 6px !important; text-align: left !important; font-size: 10px !important;
+        text-transform: none !important; letter-spacing: normal !important; white-space: normal !important;
+    }
+    table.rc-table thead th { font-weight: 700 !important; }
+    table.rc-table tr.rc-bold td { font-weight: 700 !important; }
+
+    .rc-sign-wrap { display: flex; justify-content: flex-end; margin-top: 40px; }
+    .rc-sign { width: 140px; text-align: center; }
+    .rc-sign-img { min-height: 26px; display: flex; align-items: center; justify-content: center; }
+    .rc-sign-img img { height: 28px; max-width: 130px; object-fit: contain; }
+    .rc-script { font-family: 'Dancing Script', 'Brush Script MT', cursive; font-size: 12px; font-style: italic; }
+    .rc-sign-line { border-bottom: 1px solid #000; margin: 2px 0 3px 0; }
+    .rc-sign-title { font-size: 8px; font-weight: 700; }
+
+    @media print {
+        @page { size: A4 portrait; margin: 8mm; }
+        html, body, main, .page-content-area {
+            background: #fff !important; padding: 0 !important; margin: 0 !important;
+            height: auto !important; min-height: 0 !important; overflow: visible !important; display: block !important;
+        }
+        body > aside, body > main > header, main > header, #ui-container { display: none !important; }
+        #print-container { display: block !important; }
+        .result-card { margin: 0 auto !important; padding: 0 !important; max-width: none !important; }
         body.print-single .result-card { display: none !important; }
         body.print-single .result-card.print-selected { display: block !important; page-break-after: always; break-after: page; }
-        
         body.print-all .result-card { display: block !important; page-break-after: always; break-after: page; }
         body.print-all .result-card:last-of-type { page-break-after: auto; break-after: auto; }
-        
-        .result-card { box-shadow: none !important; margin: 0 !important; border: none !important; min-height: 296mm !important; }
-        .school-header { border-bottom: 2px solid #211B17; padding-bottom: 10px; margin-bottom: 15px; }
-        .student-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; border: 1px solid #e5e7eb; padding: 10px; border-radius: 8px; }
     }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 
 {{-- UI Container (Hidden on Print) --}}
 <div id="ui-container">
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 text-white shadow-sm" style="background:var(--color-primary);">
-        <div><h1 class="text-base font-bold">{{ $exam->title }}</h1><p class="mt-1 text-xs">{{ $exam->schoolClass->name }} · {{ $exam->start_date->format(\App\Models\SystemSetting::getSetting('date_format', 'Y-m-d')) }} to {{ $exam->end_date->format(\App\Models\SystemSetting::getSetting('date_format', 'Y-m-d')) }}</p></div>
+        <div><h1 class="text-base font-bold">{{ $exam->title }}</h1><p class="mt-1 text-xs">{{ $exam->schoolClass->name }} Â· {{ $exam->start_date->format(\App\Models\SystemSetting::getSetting('date_format', 'Y-m-d')) }} to {{ $exam->end_date->format(\App\Models\SystemSetting::getSetting('date_format', 'Y-m-d')) }}</p></div>
         <div class="flex flex-wrap gap-2">
             <button type="button" data-print-all-results class="inline-flex items-center gap-1 rounded border border-white/70 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition"><i data-lucide="printer" class="h-3.5 w-3.5"></i> Print All Results</button>
             <a href="{{ route('examination.results.index') }}" class="rounded border border-white/70 px-3 py-2 text-xs font-semibold hover:bg-white/10 transition">Exam List</a>
@@ -93,7 +129,7 @@
                         @php 
                             $items = $result->items->filter(fn ($item) => $item->paper !== null);
                             $failLabel = $exam->result_thresholds['subject_fail_label'] ?? 'Fail';
-                            $failedCount = $items->filter(fn ($item) => stripos($item->status, $failLabel) !== false || stripos($item->status, 'Fail') !== false)->count();
+                            $failedCount = $items->filter(fn ($item) => stripos((string) $subjectStatusOf($item), $failLabel) !== false || stripos((string) $subjectStatusOf($item), 'Fail') !== false)->count();
                             
                             $passThreshold = (float) ($exam->result_thresholds['overall_pass_threshold'] ?? 0);
                             $maxFailedSubjects = (int) ($exam->result_thresholds['max_failed_subjects'] ?? 0);
@@ -167,6 +203,7 @@
 {{-- Print Container (Visible only on Print) --}}
 <div id="print-container" style="display: none;">
 @php
+    $admitRolls = $exam->admitCards()->pluck('exam_roll_number', 'student_id');
     // Calculate Ranks
     $examResults = $results->map(function($r) {
         $totalMarks = 0;
@@ -211,7 +248,7 @@
         
         // Calculate failed subjects count
         $failLabel = $exam->result_thresholds['subject_fail_label'] ?? 'Fail';
-        $failedCount = $items->filter(fn ($item) => stripos($item->status, $failLabel) !== false || stripos($item->status, 'Fail') !== false)->count();
+        $failedCount = $items->filter(fn ($item) => stripos((string) $subjectStatusOf($item), $failLabel) !== false || stripos((string) $subjectStatusOf($item), 'Fail') !== false)->count();
         
         // Check overall thresholds
         $passThreshold = (float) ($exam->result_thresholds['overall_pass_threshold'] ?? 0);
@@ -231,169 +268,138 @@
     
     @php
         $school = $exam->school;
-        $session = $exam->academicSession ?? \App\Models\AcademicSession::find(session('selected_academic_session_id'));
-        $bg = \App\Models\SchoolSetting::getSetting($school->id, $session->id, 'examination_background');
-        $bgClass = $bg ? 'has-bg' : '';
-        $showPhoto = \App\Models\SchoolSetting::getSetting($school->id, $session->id, 'exam_result_photo', '0') == '1';
+        $session = $exam->session ?? \App\Models\AcademicSession::find($exam->academic_session_id);
+        $showPhoto = \App\Models\SchoolSetting::getSetting($school?->id, $session?->id, 'exam_result_photo', '0') == '1';
+        $dateFmt = \App\Models\SystemSetting::getSetting('date_format', 'd-m-Y');
+        $showSubjectStatus = (bool) ($exam->result_thresholds['show_subject_status'] ?? false);
+        $showCode = (bool) ($exam->settings['subject_code'] ?? false);
+        $showType = (bool) ($exam->settings['subject_type'] ?? false);
+        $showMax = $exam->exam_type === 'marks' && ($exam->settings['total_marks'] ?? false);
+        $showObt = $exam->exam_type === 'marks' && ($exam->settings['total_obtained_marks'] ?? false);
+
+        $leftCols = 1 + ($showCode ? 1 : 0) + ($showType ? 1 : 0);
+        $markCols = ($showMax ? 1 : 0) + ($showObt ? 1 : 0);
+        $tailCols = 1 + ($showSubjectStatus ? 1 : 0) + 1; // grade + status + remarks
+        $totalCols = $leftCols + $markCols + $tailCols;
+
+        $schoolSig = \App\Models\SchoolSetting::getSetting($school?->id, $session?->id, 'school_signature');
+        $sigPath = (($exam->settings['teacher_signature_enabled'] ?? false) && !empty($exam->settings['teacher_signature_path']))
+            ? 'storage/'.$exam->settings['teacher_signature_path']
+            : ($schoolSig ? 'storage/'.$schoolSig : null);
+        $gradeRemarks = collect($exam->grade_criteria ?? [])->filter(fn ($r) => !empty($r['remark']))->pluck('remark', 'grade')->all();
+        $examRoll = $admitRolls[$result->student_id] ?? ($result->student->roll_number ?? '---');
     @endphp
-    
-    <div id="result-{{ $result->id }}" class="result-card p-8 mb-6 {{ $bgClass }}" style="font-family: sans-serif; position: relative; min-height: 296mm; background-color: transparent !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex; flex-direction: column; overflow: hidden; z-index: 0; border: none;">
-        {{-- Solid white background to prevent dark mode bleed --}}
-        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;" alt="">
-        @if($bg)
-            <img src="{{ asset($bg) }}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; opacity: 0.85;" alt="Background">
-        @endif
-        <div style="position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column;">
-        {{-- School & Exam Header --}}
-        <div class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-black">{{ $exam->school->name ?? 'School Name' }}</h1>
-            <p class="text-sm font-bold mt-2 underline">Exam: {{ $exam->title }} ({{ $exam->start_date->format(\App\Models\SystemSetting::getSetting('date_format', 'Y-m-d')) }} - {{ $exam->end_date->format(\App\Models\SystemSetting::getSetting('date_format', 'Y-m-d')) }})</p>
+
+    <div id="result-{{ $result->id }}" class="result-card">
+        {{-- School Header --}}
+        <div class="rc-header">
+            <h1 class="rc-school">{{ $school->name ?? 'School Name' }}</h1>
+            <div class="rc-contact">Phone: {{ $school->phone ?? 'â€”' }} &nbsp;|&nbsp; Email: {{ $school->email ?? 'â€”' }}</div>
+            <div class="rc-contact">Address: {{ $school->address ?? 'â€”' }}</div>
+            <div class="rc-divider"></div>
         </div>
 
+        {{-- Exam Title --}}
+        <div class="rc-title">Exam: {{ $exam->title }} ({{ $exam->start_date->format($dateFmt) }} - {{ $exam->end_date->format($dateFmt) }})</div>
+
         {{-- Student Details --}}
-        <div class="flex justify-between items-start mb-6 text-xs text-black">
-            <div class="flex-1">
-                <table class="w-full text-left">
-                    <tr><td class="font-bold py-1 w-32">Student Name:</td><td class="font-bold">{{ $result->student->full_name }}</td></tr>
-                    <tr><td class="font-bold py-1">Admission Number:</td><td class="font-bold">{{ $result->student->admission_no }}</td></tr>
-                    <tr><td class="font-bold py-1">Class: <span class="font-normal">{{ $result->student->schoolClass->name ?? '---' }}</span></td><td class="font-bold">Section: <span class="font-normal">{{ $result->student->section?->name ?? '---' }}</span></td></tr>
-                    <tr><td class="font-bold py-1">Father's Name:</td><td class="font-bold">{{ $result->student->father_name ?? '---' }}</td></tr>
-                </table>
-            </div>
-            <div class="flex-1 text-right pr-10">
-                <table class="w-full text-right">
-                    <tr><td class="font-bold py-1">Session:</td><td class="font-bold">{{ $exam->session->name ?? '---' }}</td></tr>
-                    <tr><td class="font-bold py-1">Exam Roll Number:</td><td class="font-bold">{{ $result->student->roll_number ?? '---' }}</td></tr>
-                </table>
+        <div class="rc-details">
+            <div class="rc-details-col">
+                <div class="rc-row"><b>Student Name:</b>&nbsp;{{ $result->student->full_name }}</div>
+                <div class="rc-row rc-split">
+                    <span><b>Admission Number:</b> {{ $result->student->admission_no }}</span>
+                    <span><b>Session:</b> {{ $session->name ?? '---' }}</span>
+                </div>
+                <div class="rc-row rc-split">
+                    <span><b>Class:</b> {{ $result->student->schoolClass->name ?? '---' }} &nbsp;&nbsp; <b>Section:</b> {{ $result->student->section?->name ?? '---' }}</span>
+                    <span><b>Exam Roll Number:</b> {{ $examRoll }}</span>
+                </div>
+                <div class="rc-row"><b>Father's Name:</b>&nbsp;{{ $result->student->father_name ?? '---' }}</div>
             </div>
             @if($showPhoto)
-                @if($result->student->photo)
-                    <div class="border border-black flex-shrink-0" style="width: 70px; height: 90px;">
-                        <img src="{{ $result->student->photo_url }}" class="w-full h-full object-cover">
-                    </div>
-                @else
-                    <div class="border border-black flex-shrink-0 bg-gray-100 flex items-center justify-center text-[10px] text-gray-400" style="width: 70px; height: 90px;">Photo</div>
-                @endif
+                <div class="rc-photo">
+                    @if($result->student->photo_url)
+                        <img src="{{ $result->student->photo_url }}" alt="">
+                    @else
+                        <span>Photo</span>
+                    @endif
+                </div>
             @endif
         </div>
 
         {{-- Subjects Table --}}
-        <div class="mb-2 border border-black">
-            <table class="w-full text-xs text-left border-collapse text-black">
-                <thead>
-                    <tr class="border-b border-black">
-                        @if($exam->settings['subject_code'] ?? false)
-                            <th class="p-1.5 font-bold border-r border-black">Paper Code</th>
-                        @endif
-                        <th class="p-1.5 font-bold border-r border-black">Subject Name</th>
-                        @if($exam->settings['subject_type'] ?? false)
-                            <th class="p-1.5 font-bold border-r border-black">Subject Type</th>
-                        @endif
-                        @if($exam->exam_type === 'marks')
-                            @if($exam->settings['total_marks'] ?? false)
-                                <th class="p-1.5 font-bold border-r border-black text-center">Maximum Marks</th>
-                            @endif
-                            @if($exam->settings['total_obtained_marks'] ?? false)
-                                <th class="p-1.5 font-bold border-r border-black text-center">Obtained Marks</th>
-                            @endif
-                        @endif
-                        <th class="p-1.5 font-bold text-center {{ ($exam->result_thresholds['show_subject_status'] ?? false) ? 'border-r border-black' : '' }}">Grade</th>
-                        @if($exam->result_thresholds['show_subject_status'] ?? false)
-                            <th class="p-1.5 font-bold text-center">{{ $exam->result_thresholds['subject_status_header'] ?? 'Status' }}</th>
-                        @endif
+        <table class="rc-table no-theme-table">
+            <thead>
+                <tr>
+                    @if($showCode)<th>Paper Code</th>@endif
+                    <th>Subject Name</th>
+                    @if($showType)<th>Subject Type</th>@endif
+                    @if($showMax)<th>Maximum Marks</th>@endif
+                    @if($showObt)<th>Obtained Marks</th>@endif
+                    <th>Grade</th>
+                    @if($showSubjectStatus)<th>{{ $exam->result_thresholds['subject_status_header'] ?? 'Status' }}</th>@endif
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($items as $item)
+                    <tr>
+                        @if($showCode)<td>{{ $item->paper->paper_code ?? '---' }}</td>@endif
+                        <td>{{ $item->paper->subject_name }}</td>
+                        @if($showType)<td>{{ $item->paper->subject_type ?? '---' }}</td>@endif
+                        @if($showMax)<td>{{ rtrim(rtrim(number_format((float) $item->paper->maximum_marks, 2, '.', ''), '0'), '.') }}</td>@endif
+                        @if($showObt)<td>{{ $item->obtained_marks !== null ? rtrim(rtrim(number_format((float) $item->obtained_marks, 2, '.', ''), '0'), '.') : '---' }}</td>@endif
+                        <td>{{ $item->grade ?? '---' }}</td>
+                        @if($showSubjectStatus)<td><b>{{ $subjectStatusOf($item) ?? '---' }}</b></td>@endif
+                        <td>{{ $item->remark ?: ($gradeRemarks[$item->grade] ?? '') }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach($items as $item)
-                        <tr class="border-b border-black">
-                            @if($exam->settings['subject_code'] ?? false)
-                                <td class="p-1.5 border-r border-black">{{ $item->paper->paper_code ?? '---' }}</td>
-                            @endif
-                            <td class="p-1.5 border-r border-black">{{ $item->paper->subject_name }}</td>
-                            @if($exam->settings['subject_type'] ?? false)
-                                <td class="p-1.5 border-r border-black">{{ $item->paper->subject_type ?? '---' }}</td>
-                            @endif
-                            @if($exam->exam_type === 'marks')
-                                @if($exam->settings['total_marks'] ?? false)
-                                    <td class="p-1.5 border-r border-black text-center">{{ $item->paper->maximum_marks }}</td>
-                                @endif
-                                @if($exam->settings['total_obtained_marks'] ?? false)
-                                    <td class="p-1.5 border-r border-black text-center font-bold">{{ $item->obtained_marks ?? '---' }}</td>
-                                @endif
-                            @endif
-                            <td class="p-1.5 text-center font-bold {{ ($exam->result_thresholds['show_subject_status'] ?? false) ? 'border-r border-black' : '' }}">{{ $item->grade ?? '---' }}</td>
-                            @if($exam->result_thresholds['show_subject_status'] ?? false)
-                                <td class="p-1.5 text-center font-bold">{{ $item->status ?? '---' }}</td>
-                            @endif
-                        </tr>
-                    @endforeach
-                    
-                    {{-- Overall Summary Rows --}}
-                    @php 
-                        $colspan = 1;
-                        if($exam->settings['subject_code'] ?? false) $colspan++;
-                        if($exam->settings['subject_type'] ?? false) $colspan++;
-                        
-                        $rightColspan = 1;
-                        if($exam->settings['total_marks'] ?? false) $rightColspan++;
-                        if($exam->settings['total_obtained_marks'] ?? false) $rightColspan++;
-                        if($exam->result_thresholds['show_subject_status'] ?? false) $rightColspan++;
-                    @endphp
+                @endforeach
 
-                    @if($exam->exam_type === 'marks')
-                        <tr class="border-b border-black font-bold">
-                            <td colspan="{{ $colspan }}" class="p-1.5 border-r border-black">Total</td>
-                            @if($exam->settings['total_marks'] ?? false)
-                                <td class="p-1.5 border-r border-black text-center">{{ $result->total_max_marks }}</td>
-                            @endif
-                            @if($exam->settings['total_obtained_marks'] ?? false)
-                                <td class="p-1.5 border-r border-black text-center">{{\App\Models\SchoolSetting::getCurrencySymbol()}}{{ number_format($result->total_marks, 2) }}</td>
-                            @endif
-                            <td colspan="{{ 1 + ($exam->result_thresholds['show_subject_status'] ?? false ? 1 : 0) }}" class="p-1.5"></td>
-                        </tr>
-                        <tr class="border-b border-black font-bold">
-                            <td colspan="{{ $colspan }}" class="p-1.5 border-r border-black">Percentage</td>
-                            <td colspan="{{ $rightColspan }}" class="p-1.5">{{\App\Models\SchoolSetting::getCurrencySymbol()}}{{ number_format($result->percentage, 2) }} %</td>
-                        </tr>
-                        @if($exam->settings['show_ranks'] ?? false)
-                            <tr class="border-b border-black font-bold">
-                                <td colspan="{{ $colspan }}" class="p-1.5 border-r border-black">Rank</td>
-                                <td colspan="{{ $rightColspan }}" class="p-1.5">{{ $result->rank }} / {{ $results->count() }}</td>
-                            </tr>
-                        @endif
-                    @endif
-
-                    @if($exam->result_thresholds['show_overall_status'] ?? false)
-                        <tr class="border-b border-black font-bold">
-                            <td colspan="{{ $colspan }}" class="p-1.5 border-r border-black">{{ $exam->result_thresholds['overall_row_header'] ?? 'Overall Result' }}</td>
-                            <td colspan="{{ $rightColspan }}" class="p-1.5 uppercase {{ $overallStatus === 'Pass' ? 'text-green-700' : 'text-red-700' }}">{{ $overallStatus === 'Pass' ? ($exam->result_thresholds['overall_pass_label'] ?? 'Pass') : ($exam->result_thresholds['overall_fail_label'] ?? 'Fail') }}</td>
-                        </tr>
-                    @endif
-                    
-                    <tr class="font-bold text-xs">
-                        <td colspan="100%" class="p-1.5">
-                            <div class="flex gap-4">
-                                <span class="w-1/2">Teacher Remark : </span>
-                                <span class="w-1/2 border-l border-black pl-2">School Remark : </span>
-                            </div>
-                        </td>
+                @if($exam->exam_type === 'marks')
+                    <tr class="rc-bold">
+                        <td colspan="{{ $leftCols }}">Total</td>
+                        @if($showMax)<td>{{ rtrim(rtrim(number_format($result->total_max_marks, 2, '.', ''), '0'), '.') }}</td>@endif
+                        @if($showObt)<td>{{ rtrim(rtrim(number_format($result->total_marks, 2, '.', ''), '0'), '.') }}</td>@endif
+                        <td colspan="{{ $tailCols }}"></td>
                     </tr>
-                </tbody>
-            </table>
-        </div>
-
-        {{-- Footer Signatures --}}
-        <div class="mt-auto pt-20 text-xs text-black flex justify-end">
-            <div class="text-center w-48">
-                @if(($exam->settings['teacher_signature_enabled'] ?? false) && isset($exam->settings['teacher_signature_path']))
-                    <img src="{{ asset('storage/'.$exam->settings['teacher_signature_path']) }}" class="h-10 mx-auto mb-1 object-contain">
-                @else
-                    <div class="h-10"></div>
+                    <tr class="rc-bold">
+                        <td colspan="{{ $leftCols }}">Percentage</td>
+                        @if($markCols > 0)<td colspan="{{ $markCols }}">{{ number_format($result->percentage, 2) }} %</td>@endif
+                        <td>{{ $grade ?? '---' }}</td>
+                        <td colspan="{{ $tailCols - 1 }}"></td>
+                    </tr>
                 @endif
-                <div class="border-t border-black pt-1 font-bold">Principal Signature</div>
+
+                @if($exam->result_thresholds['show_overall_status'] ?? false)
+                    <tr class="rc-bold">
+                        <td colspan="{{ $leftCols }}">{{ $exam->result_thresholds['overall_row_header'] ?? 'Overall Result' }}</td>
+                        <td colspan="{{ $totalCols - $leftCols }}">{{ $overallStatus === 'Pass' ? ($exam->result_thresholds['overall_pass_label'] ?? 'Pass') : ($exam->result_thresholds['overall_fail_label'] ?? 'Fail') }}</td>
+                    </tr>
+                @endif
+
+                @if($exam->exam_type === 'marks' && ($exam->settings['show_ranks'] ?? false))
+                    <tr class="rc-bold">
+                        <td colspan="{{ $leftCols }}">Rank</td>
+                        <td colspan="{{ $totalCols - $leftCols }}">{{ $result->rank }} / {{ $results->count() }}</td>
+                    </tr>
+                @endif
+            </tbody>
+        </table>
+
+        {{-- Signature --}}
+        <div class="rc-sign-wrap">
+            <div class="rc-sign">
+                <div class="rc-sign-img">
+                    @if($sigPath && file_exists(public_path($sigPath)))
+                        <img src="{{ asset($sigPath) }}" alt="Signature">
+                    @else
+                        <span class="rc-script">{{ $school->name ?? '' }}</span>
+                    @endif
+                </div>
+                <div class="rc-sign-line"></div>
+                <div class="rc-sign-title">Principal Signature</div>
             </div>
         </div>
-        </div> {{-- End relative content wrapper --}}
     </div>
 @endforeach
 </div>

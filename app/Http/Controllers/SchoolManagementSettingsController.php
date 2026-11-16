@@ -19,6 +19,7 @@ class SchoolManagementSettingsController extends Controller
         $showExamination = SystemSetting::getSetting('show_examination_menu', '1');
         $showTransport = SystemSetting::getSetting('show_transport_menu', '1');
         $showAccounting = SystemSetting::getSetting('show_accounting_menu', '1');
+        $showWebsiteSettings = SystemSetting::getSetting('show_website_settings_menu', '1');
         $themeColor = SystemSetting::getSetting('theme_color', '#B47A42');
 
         return view('school-management.settings.index', compact(
@@ -29,6 +30,7 @@ class SchoolManagementSettingsController extends Controller
             'showExamination',
             'showTransport',
             'showAccounting',
+            'showWebsiteSettings',
             'themeColor'
         ));
     }
@@ -54,7 +56,7 @@ class SchoolManagementSettingsController extends Controller
 
         // Handle checkboxes (if they are unchecked, they won't be in the request, so we explicitly set them to 0 if not present)
         $checkboxes = [
-            'show_library_menu', 'show_examination_menu', 'show_transport_menu', 'show_accounting_menu',
+            'show_library_menu', 'show_examination_menu', 'show_transport_menu', 'show_accounting_menu', 'show_website_settings_menu',
             'enable_bank_transfer', 'enable_upi_transfer', 'enable_cash_payment', 'enable_check_payment',
         ];
         foreach ($checkboxes as $chk) {

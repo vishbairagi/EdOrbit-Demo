@@ -14,6 +14,7 @@ class School extends Model
 
     protected $fillable = [
         'name',
+        'logo',
         'phone',
         'email',
         'address',
@@ -27,6 +28,26 @@ class School extends Model
         'admission_base_number',
         'admission_base_padding',
     ];
+
+    /**
+     * Get the full URL to the school's logo.
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (!$this->logo) {
+            return null;
+        }
+
+        if (filter_var($this->logo, FILTER_VALIDATE_URL)) {
+            return $this->logo;
+        }
+
+        if (str_starts_with($this->logo, 'uploads/')) {
+            return asset($this->logo);
+        }
+
+        return asset('storage/' . ltrim($this->logo, '/'));
+    }
 
     /** @return HasMany<StudentCategory> */
     public function studentCategories(): HasMany
@@ -62,5 +83,23 @@ class School extends Model
     public function feeInvoices(): HasMany
     {
         return $this->hasMany(FeeInvoice::class);
+    }
+
+    /** @return HasMany<Student> */
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
+
+    /** @return HasMany<SchoolClass> */
+    public function classes(): HasMany
+    {
+        return $this->hasMany(SchoolClass::class);
+    }
+
+    /** @return HasMany<Staff> */
+    public function staff(): HasMany
+    {
+        return $this->hasMany(Staff::class);
     }
 }

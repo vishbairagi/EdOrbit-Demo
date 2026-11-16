@@ -71,8 +71,12 @@
 <div class="overflow-x-auto">
             <table style="width:100%; border-collapse:collapse;">
                 <thead>
-                    <tr style="background:linear-gradient(135deg,#B47A42,#D4A055);">
-                        <th class="text-left text-white font-semibold text-sm px-4 py-3">Name</th>
+                    <tr class="bg-navy">
+                        <th class="px-4 py-2 w-10 text-center">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"
+                                class="w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600" title="Select All">
+                        </th>
+                        <th class="text-left text-white font-semibold text-xs px-4 py-3 uppercase tracking-wider">Name</th>
                         <th class="text-left text-white font-semibold text-sm px-4 py-3">Phone</th>
                         <th class="text-left text-white font-semibold text-sm px-4 py-3">Email</th>
                         <th class="text-left text-white font-semibold text-sm px-4 py-3">Salary</th>
@@ -87,7 +91,11 @@
                 </thead>
                 <tbody>
                     @forelse($staff as $member)
-                    <tr style="border-bottom:1px solid #F0EAE3;" class="hover-row">
+                    <tr style="border-bottom:1px solid #F0EAE3;" class="hover-row" data-id="{{ $member->id }}">
+                        <td class="px-4 py-2 text-center w-10">
+                            <input type="checkbox" value="{{ $member->id }}" onchange="updateBulkToolbar()"
+                                class="row-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-red-600">
+                        </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-3">
                                 @if($member->photo)

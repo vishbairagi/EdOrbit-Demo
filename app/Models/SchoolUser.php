@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class SchoolUser extends Authenticatable
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+class SchoolUser extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
@@ -89,5 +91,19 @@ class SchoolUser extends Authenticatable
         $count = self::where('school_id', $schoolId)->count() + 1;
 
         return 'ADM-'.str_pad($count, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'user_type' => 'admin',
+            'guard' => 'school_user',
+            'school_id' => $this->school_id,
+        ];
     }
 }

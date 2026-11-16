@@ -4,15 +4,15 @@
 
 @section('content')
 
-{{-- Page Header --}}
-<div class="bg-navy rounded-xl shadow-md px-5 py-3 flex items-center justify-between mb-6">
-    <div class="flex items-center text-white font-bold text-base">
-        <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
-        Add Study Material
+{{-- Top Header Section --}}
+<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <div>
+        <h3 class="text-base font-bold text-heading">Add Study Material</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Session: {{ $session->name ?? 'Current Session' }}</p>
     </div>
     <a href="{{ route('academic.study-materials.index') }}"
-       class="inline-flex items-center px-3 py-1.5 bg-white text-navy text-xs font-semibold rounded-lg hover:bg-gray-100 transition-colors">
-        <i data-lucide="arrow-left" class="w-3.5 h-3.5 mr-1"></i>
+       class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-2xs">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5 mr-1 text-gray-600"></i>
         Back to List
     </a>
 </div>

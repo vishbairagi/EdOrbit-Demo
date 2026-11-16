@@ -10,6 +10,7 @@ use App\Models\SchoolUser;
 use App\Models\Staff;
 use App\Models\Student;
 use App\Models\StudentCategory;
+use App\Models\StudentTrash;
 use App\Models\StudentType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -77,12 +78,17 @@ class StudentCategoryController extends Controller
             ->where('academic_session_id', $session->id)
             ->orderBy('name')
             ->get();
-        $activeTab = in_array(request('tab'), ['general', 'categories', 'student-types', 'fee-periods', 'payment-methods', 'registration', 'dashboard', 'live-classes', 'card-background', 'examination', 'email-carrier', 'email-templates'], true)
+        $activeTab = in_array(request('tab'), ['general', 'categories', 'student-types', 'fee-periods', 'payment-methods', 'registration', 'dashboard', 'live-classes', 'card-background', 'examination', 'email-carrier', 'email-templates', 'sms-provider', 'sms-templates', 'trash'], true)
             ? request('tab')
             : 'general';
 
+        StudentTrash::purgeExpired();
+        $trashedStudents = StudentTrash::where('school_id', $school->id)
+            ->orderByDesc('deleted_at')
+            ->get();
+
         return view('sm-school.settings.index', compact(
-            'school', 'session', 'categories', 'studentTypes', 'sessions', 'feePeriods', 'paymentMethods', 'activeTab'
+            'school', 'session', 'categories', 'studentTypes', 'sessions', 'feePeriods', 'paymentMethods', 'activeTab', 'trashedStudents'
         ));
     }
 
@@ -163,5 +169,42 @@ class StudentCategoryController extends Controller
         $session_id = $studentCategory->academic_session_id ?? $this->currentSession()->id;
 
         return redirect()->route('sm-school.settings.index', ['session_id' => $session_id, 'tab' => 'registration'])->with('success', 'Student category deleted successfully.');
+    }
+
+    public function restoreTrash(int $id): RedirectResponse
+    {
+        $school = $this->currentSchool();
+        $trash = StudentTrash::where('school_id', $school->id)->findOrFail($id);
+
+        try {
+            $student = $trash->restoreStudent();
+            return redirect()->route('sm-school.settings.index', ['tab' => 'trash'])
+                ->with('success', "Student {$student->full_name} and all associated records have been successfully restored.");
+        } catch (\Throwable $e) {
+            return redirect()->route('sm-school.settings.index', ['tab' => 'trash'])
+                ->with('error', 'Failed to restore student: ' . $e->getMessage());
+        }
+    }
+
+    public function destroyTrash(int $id): RedirectResponse
+    {
+        $school = $this->currentSchool();
+        $trash = StudentTrash::where('school_id', $school->id)->findOrFail($id);
+
+        $name = $trash->full_name ?: ($trash->first_name . ' ' . $trash->last_name);
+        $trash->delete();
+
+        return redirect()->route('sm-school.settings.index', ['tab' => 'trash'])
+            ->with('success', "Student {$name}'s archived records have been permanently deleted.");
+    }
+
+    public function emptyTrash(): RedirectResponse
+    {
+        $school = $this->currentSchool();
+        $count = StudentTrash::where('school_id', $school->id)->count();
+        StudentTrash::where('school_id', $school->id)->delete();
+
+        return redirect()->route('sm-school.settings.index', ['tab' => 'trash'])
+            ->with('success', "Trash emptied permanently ({$count} student records deleted).");
     }
 }

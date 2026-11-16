@@ -25,18 +25,44 @@ class SchoolClassController extends Controller
         return [$school, $session];
     }
 
-    public function index()
+    public function index(Request $request)
     {
         [$school, $session] = $this->getSchoolAndSession();
-        $classes = SchoolClass::with(['classGroup', 'sections'])
+
+        $query = SchoolClass::with(['classGroup', 'sections'])
             ->where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->orderBy('order')
+            ->where('academic_session_id', $session->id);
+
+        if ($search = trim($request->input('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhereHas('classGroup', function ($gq) use ($search) {
+                      $gq->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('sections', function ($sq) use ($search) {
+                      $sq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($classGroupId = $request->input('class_group_id')) {
+            $query->where('class_group_id', $classGroupId);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [2, 5, 10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $classes = $query->orderBy('order')
             ->orderBy('name')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
+
         $classGroups = ClassGroup::where('school_id', $school->id)
             ->where('academic_session_id', $session->id)
             ->where('status', 'active')
+            ->orderBy('name')
             ->get();
 
         return view('sm-school.classes.index', compact('school', 'session', 'classes', 'classGroups'));

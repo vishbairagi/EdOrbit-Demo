@@ -59,8 +59,8 @@ class LibraryController extends Controller
         $school = $this->currentSchool();
         $session = $this->currentSession();
         $books = $school
-            ? LibraryBook::where('school_id', $school->id)->when($session, fn($q) => $q->where('academic_session_id', $session->id))->withCount(['activeIssues'])->latest()->get()
-            : collect();
+            ? LibraryBook::where('school_id', $school->id)->when($session, fn($q) => $q->where('academic_session_id', $session->id))->withCount(['activeIssues'])->latest()->paginate(15)
+            : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
 
         return view('library.books', compact('school', 'books'));
     }
@@ -146,6 +146,16 @@ class LibraryController extends Controller
         $book->delete();
 
         return redirect()->route('library.books')->with('success', 'Book deleted successfully.');
+    }
+
+    public function bulkDestroyBooks(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        if (!empty($ids)) {
+            LibraryBook::whereIn('id', $ids)->delete();
+            return redirect()->route('library.books')->with('success', count($ids) . ' books deleted successfully.');
+        }
+        return redirect()->route('library.books')->with('error', 'No books selected for deletion.');
     }
 
     // ── Book Issue ────────────────────────────────────────────────────────
@@ -379,5 +389,15 @@ class LibraryController extends Controller
         $card->delete();
 
         return redirect()->route('library.library-cards')->with('success', 'Library card deleted.');
+    }
+
+    public function bulkDestroyCards(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        if (!empty($ids)) {
+            LibraryCard::whereIn('id', $ids)->delete();
+            return redirect()->route('library.library-cards')->with('success', count($ids) . ' library card(s) deleted successfully.');
+        }
+        return redirect()->route('library.library-cards')->with('error', 'No cards selected for deletion.');
     }
 }

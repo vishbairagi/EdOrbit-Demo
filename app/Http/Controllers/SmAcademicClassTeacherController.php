@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicSession;
+use App\Models\ClassGroup;
 use App\Models\ClassTeacher;
 use App\Models\SchoolClass;
 use App\Models\Staff;
@@ -29,16 +31,30 @@ class SmAcademicClassTeacherController extends Controller
             $query->where('section_id', $request->section_id);
         }
         
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('staff', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('employee_id', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+        if ($search = trim($request->input('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('staff', function ($sq) use ($search) {
+                    $sq->where('name', 'like', "%{$search}%")
+                      ->orWhere('employee_id', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhereHas('schoolClass', function ($cq) use ($search) {
+                    $cq->where('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('section', function ($secq) use ($search) {
+                    $secq->where('name', 'like', "%{$search}%");
+                });
             });
         }
 
-        $classTeachers = $query->get();
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [2, 5, 10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $classTeachers = $query->latest('id')
+            ->paginate($perPage)
+            ->withQueryString();
 
         $staffs = Staff::where('school_id', $schoolId)->where('status', 'Active')->get();
         $classes = SchoolClass::with('sections')
@@ -48,7 +64,48 @@ class SmAcademicClassTeacherController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('sm-academic.class-teachers.index', compact('classTeachers', 'staffs', 'classes'));
+        $session = AcademicSession::find($sessionId);
+        $totalGroups = ClassGroup::where('school_id', $schoolId)
+            ->where('academic_session_id', $sessionId)
+            ->count();
+
+        // ── Analytics for Top Header Circles / Cards ───────────────────
+        $totalStaff = Staff::where('school_id', $schoolId)->where('status', 'Active')->count();
+        $assignedStaffCount = ClassTeacher::where('school_id', $schoolId)
+            ->where('session_id', $sessionId)
+            ->distinct('staff_id')
+            ->count('staff_id');
+        $unassignedStaffCount = max(0, $totalStaff - $assignedStaffCount);
+
+        $totalClassesCount = SchoolClass::where('school_id', $schoolId)
+            ->where('academic_session_id', $sessionId)
+            ->count();
+        $assignedClassesCount = ClassTeacher::where('school_id', $schoolId)
+            ->where('session_id', $sessionId)
+            ->distinct('class_id')
+            ->count('class_id');
+
+        $totalAssignmentsCount = ClassTeacher::where('school_id', $schoolId)
+            ->where('session_id', $sessionId)
+            ->count();
+
+        $staffCoveragePercent = $totalStaff > 0 ? (int) round(($assignedStaffCount / $totalStaff) * 100) : 0;
+        $classCoveragePercent = $totalClassesCount > 0 ? (int) round(($assignedClassesCount / $totalClassesCount) * 100) : 0;
+
+        $teacherBreakdown = ClassTeacher::with('staff')
+            ->where('school_id', $schoolId)
+            ->where('session_id', $sessionId)
+            ->selectRaw('staff_id, count(*) as count')
+            ->groupBy('staff_id')
+            ->orderByDesc('count')
+            ->get();
+
+        return view('sm-academic.class-teachers.index', compact(
+            'classTeachers', 'staffs', 'classes', 'session', 'totalGroups',
+            'totalStaff', 'assignedStaffCount', 'unassignedStaffCount',
+            'totalClassesCount', 'assignedClassesCount', 'totalAssignmentsCount',
+            'staffCoveragePercent', 'classCoveragePercent', 'teacherBreakdown'
+        ));
     }
 
     public function store(Request $request): RedirectResponse
@@ -56,6 +113,68 @@ class SmAcademicClassTeacherController extends Controller
         $schoolId = session('selected_school_id');
         $sessionId = session('selected_session_id') ?: \App\Models\SystemSetting::getSetting('current_session_id');
 
+        $staffId = $request->input('staff_id');
+        $request->validate([
+            'staff_id' => [
+                'required',
+                Rule::exists('staff', 'id')
+                    ->where('school_id', $schoolId)
+                    ->where('status', 'Active'),
+            ],
+        ]);
+
+        // Multi-class and multi-section support (from interactive right panel form)
+        if ($request->has('class_sections')) {
+            if (! is_array($request->class_sections) || empty($request->class_sections)) {
+                return back()->with('error', 'Please select at least one class or section to assign.');
+            }
+
+            $createdCount = 0;
+            foreach ($request->class_sections as $classId => $sectionIds) {
+                $classExists = SchoolClass::where('id', $classId)
+                    ->where('school_id', $schoolId)
+                    ->where('academic_session_id', $sessionId)
+                    ->exists();
+                if (! $classExists) continue;
+
+                if (is_array($sectionIds) && count($sectionIds) > 0) {
+                    foreach ($sectionIds as $secId) {
+                        $secExists = \App\Models\Section::where('id', $secId)->where('school_class_id', $classId)->exists();
+                        if (! $secExists) continue;
+
+                        ClassTeacher::updateOrCreate(
+                            [
+                                'school_id'  => $schoolId,
+                                'session_id' => $sessionId,
+                                'class_id'   => $classId,
+                                'section_id' => $secId,
+                            ],
+                            ['staff_id' => $staffId]
+                        );
+                        $createdCount++;
+                    }
+                } else {
+                    ClassTeacher::updateOrCreate(
+                        [
+                            'school_id'  => $schoolId,
+                            'session_id' => $sessionId,
+                            'class_id'   => $classId,
+                            'section_id' => null,
+                        ],
+                        ['staff_id' => $staffId]
+                    );
+                    $createdCount++;
+                }
+            }
+
+            if ($createdCount === 0) {
+                return back()->with('error', 'Please select at least one valid class or section to assign.');
+            }
+
+            return back()->with('success', "Class Teacher assigned to {$createdCount} class/section(s).");
+        }
+
+        // Backward compatibility for single class_id & section_id
         $validated = $request->validate([
             'staff_id' => [
                 'required',

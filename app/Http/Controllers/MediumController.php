@@ -17,10 +17,20 @@ class MediumController extends Controller
         return School::findOrFail($schoolId);
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $school = $this->getSchool();
-        $mediums = Medium::where('school_id', $school->id)->orderBy('name')->get();
+        $query = Medium::where('school_id', $school->id);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $mediums = $query->orderBy('name')->get();
 
         return view('sm-academic.mediums.index', compact('school', 'mediums'));
     }
@@ -167,11 +177,12 @@ class MediumController extends Controller
     }
     public function bulkDestroy(Request $request)
     {
+        $school = $this->getSchool();
         $ids = $request->input('ids', []);
         if (empty($ids)) {
             return back()->with('error', 'No items selected.');
         }
-        $deleted = \App\Models\Medium::whereIn('id', $ids)->delete();
-        return back()->with('success', "$deleted record(s) deleted successfully.");
+        $deleted = Medium::where('school_id', $school->id)->whereIn('id', $ids)->delete();
+        return back()->with('success', "$deleted medium(s) deleted successfully.");
     }
 }

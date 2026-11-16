@@ -45,6 +45,117 @@ class SubjectController extends Controller
             $query->whereIn('school_class_id', $classTeacherClassIds ?? []);
         }
 
+        $classesQuery = SchoolClass::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->orderBy('order')
+            ->orderBy('name');
+
+        if ($isClassTeacher || ($user && ! $user->hasPermission('academic.subjects'))) {
+            $classesQuery->whereIn('id', $classTeacherClassIds ?? []);
+        }
+        $classes = $classesQuery->get();
+
+        $subjectTypes = SubjectType::where('school_id', $school->id)
+            ->where('academic_session_id', $session->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // ── Analytics for Particular Session (Whole Session Scope) ──
+        $sessionSubjectsQuery = Subject::with(['schoolClass', 'subjectType'])
+            ->where('school_id', $school->id)
+            ->where('academic_session_id', $session->id);
+
+        if ($isClassTeacher || ($user && ! $user->hasPermission('academic.subjects'))) {
+            $sessionSubjectsQuery->whereIn('school_class_id', $classTeacherClassIds ?? []);
+        }
+        $sessionSubjects = $sessionSubjectsQuery->get();
+
+        $totalSubjectsCount = $sessionSubjects->count();
+        $totalClassesCount = $classes->count();
+        $classesWithSubjectsCount = $classes->filter(fn ($c) => $sessionSubjects->contains('school_class_id', $c->id))->count();
+        $classesWithoutSubjectsCount = max(0, $totalClassesCount - $classesWithSubjectsCount);
+        $classCoveragePercent = $totalClassesCount > 0 ? round(($classesWithSubjectsCount / $totalClassesCount) * 100) : 0;
+
+        $distinctTypesCount = $subjectTypes->count();
+        $typedSubjectsCount = $sessionSubjects->whereNotNull('subject_type_id')->count();
+        $untypedSubjectsCount = $sessionSubjects->whereNull('subject_type_id')->count();
+        $typedPercent = $totalSubjectsCount > 0 ? round(($typedSubjectsCount / $totalSubjectsCount) * 100) : 0;
+
+        $practicalCount = $sessionSubjects->filter(fn ($s) => $s->type === 'practical' || strtolower($s->subjectType?->name ?? '') === 'practical')->count();
+        $theoryCount = max(0, $totalSubjectsCount - $practicalCount);
+        $theoryPercent = $totalSubjectsCount > 0 ? round(($theoryCount / $totalSubjectsCount) * 100) : 0;
+        $practicalPercent = $totalSubjectsCount > 0 ? round(($practicalCount / $totalSubjectsCount) * 100) : 0;
+
+        $avgSubjectsPerClass = $classesWithSubjectsCount > 0 ? round($totalSubjectsCount / $classesWithSubjectsCount, 1) : 0;
+
+        // Class-wise breakdown for modal
+        $classBreakdown = $classes->map(function ($cls) use ($sessionSubjects) {
+            $clsSubjects = $sessionSubjects->where('school_class_id', $cls->id)->values();
+            $practical = $clsSubjects->filter(fn ($s) => $s->type === 'practical' || strtolower($s->subjectType?->name ?? '') === 'practical')->count();
+            $theory = max(0, $clsSubjects->count() - $practical);
+            $types = $clsSubjects->pluck('subjectType.name')->filter()->unique()->values()->all();
+
+            return [
+                'id' => $cls->id,
+                'name' => $cls->name,
+                'count' => $clsSubjects->count(),
+                'theory_count' => $theory,
+                'practical_count' => $practical,
+                'types' => $types,
+                'subjects' => $clsSubjects,
+            ];
+        });
+
+        // Subject Type breakdown for modal
+        $typeBreakdown = $subjectTypes->map(function ($type) use ($sessionSubjects, $totalSubjectsCount) {
+            $tSubjects = $sessionSubjects->where('subject_type_id', $type->id)->values();
+            $classesUsing = $tSubjects->pluck('schoolClass.name')->filter()->unique()->values()->all();
+
+            return [
+                'id' => $type->id,
+                'name' => $type->name,
+                'description' => $type->description,
+                'count' => $tSubjects->count(),
+                'percentage' => $totalSubjectsCount > 0 ? round(($tSubjects->count() / $totalSubjectsCount) * 100, 1) : 0,
+                'classes' => $classesUsing,
+                'subjects' => $tSubjects,
+            ];
+        });
+
+        if ($untypedSubjectsCount > 0) {
+            $untypedSubs = $sessionSubjects->whereNull('subject_type_id')->values();
+            $typeBreakdown->push([
+                'id' => null,
+                'name' => 'General / Untyped',
+                'description' => 'Subjects without an assigned subject type',
+                'count' => $untypedSubs->count(),
+                'percentage' => $totalSubjectsCount > 0 ? round(($untypedSubs->count() / $totalSubjectsCount) * 100, 1) : 0,
+                'classes' => $untypedSubs->pluck('schoolClass.name')->filter()->unique()->values()->all(),
+                'subjects' => $untypedSubs,
+            ]);
+        }
+
+        $analytics = [
+            'totalSubjects' => $totalSubjectsCount,
+            'totalClasses' => $totalClassesCount,
+            'classesWithSubjects' => $classesWithSubjectsCount,
+            'classesWithoutSubjects' => $classesWithoutSubjectsCount,
+            'classCoveragePercent' => $classCoveragePercent,
+            'distinctTypesCount' => $distinctTypesCount,
+            'typedSubjectsCount' => $typedSubjectsCount,
+            'untypedSubjectsCount' => $untypedSubjectsCount,
+            'typedPercent' => $typedPercent,
+            'theoryCount' => $theoryCount,
+            'practicalCount' => $practicalCount,
+            'theoryPercent' => $theoryPercent,
+            'practicalPercent' => $practicalPercent,
+            'avgSubjectsPerClass' => $avgSubjectsPerClass,
+            'classBreakdown' => $classBreakdown,
+            'typeBreakdown' => $typeBreakdown,
+        ];
+
+        // ── Main Table Filtering ──
         if ($request->filled('class_id')) {
             $query->where('school_class_id', $request->class_id);
         }
@@ -57,24 +168,22 @@ class SubjectController extends Controller
             });
         }
 
-        $subjects = $query->orderBy('school_class_id')->orderBy('name')->get();
+        // For grouped view: group the matching subjects
+        $filteredAllSubjects = (clone $query)->orderBy('school_class_id')->orderBy('name')->get();
+        $subjectsByClass = $filteredAllSubjects->groupBy(fn ($item) => $item->schoolClass?->name ?? 'Unassigned');
 
-        $classesQuery = SchoolClass::where('school_id', $school->id)
-            ->where('academic_session_id', $session->id)
-            ->orderBy('order')
-            ->orderBy('name');
-
-        if ($isClassTeacher || ($user && ! $user->hasPermission('academic.subjects'))) {
-            $classesQuery->whereIn('id', $classTeacherClassIds ?? []);
+        // Pagination
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [5, 10, 15, 25, 50, 100], true)) {
+            $perPage = 10;
         }
-        $classes = $classesQuery->get();
 
-        $subjectTypes = SubjectType::where('school_id', $school->id)->where('is_active', true)->orderBy('name')->get();
+        $subjects = $query->orderBy('school_class_id')->orderBy('name')->paginate($perPage)->withQueryString();
 
-        // Group subjects by Class for differentiated class view
-        $subjectsByClass = $subjects->groupBy(fn ($item) => $item->schoolClass?->name ?? 'Unassigned');
-
-        return view('sm-academic.subjects.index', compact('school', 'session', 'subjects', 'classes', 'subjectTypes', 'subjectsByClass', 'isClassTeacher'));
+        return view('sm-academic.subjects.index', compact(
+            'school', 'session', 'subjects', 'classes', 'subjectTypes',
+            'subjectsByClass', 'isClassTeacher', 'analytics', 'perPage'
+        ));
     }
 
     public function store(Request $request)

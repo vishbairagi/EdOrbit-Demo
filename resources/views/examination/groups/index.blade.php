@@ -7,13 +7,13 @@
     $editing = $editingGroup;
     $showGroupForm = $editing !== null || $errors->any() || request()->boolean('create');
     $criteria = old('grade_criteria', $editing?->grade_criteria ?? [
-        ['percentage_from' => 0, 'percentage_to' => 40, 'grade' => 'F', 'status' => 'Fail'],
-        ['percentage_from' => 41, 'percentage_to' => 50, 'grade' => 'D', 'status' => 'Pass'],
-        ['percentage_from' => 51, 'percentage_to' => 60, 'grade' => 'C', 'status' => 'Pass'],
-        ['percentage_from' => 61, 'percentage_to' => 70, 'grade' => 'B', 'status' => 'Pass'],
-        ['percentage_from' => 71, 'percentage_to' => 80, 'grade' => 'B+', 'status' => 'Pass'],
-        ['percentage_from' => 81, 'percentage_to' => 90, 'grade' => 'A', 'status' => 'Pass'],
-        ['percentage_from' => 91, 'percentage_to' => 100, 'grade' => 'A+', 'status' => 'Pass'],
+        ['percentage_from' => 0, 'percentage_to' => 40, 'grade' => 'F', 'status' => 'Fail', 'remark' => 'Needs Improvement'],
+        ['percentage_from' => 41, 'percentage_to' => 50, 'grade' => 'D', 'status' => 'Pass', 'remark' => 'Satisfactory'],
+        ['percentage_from' => 51, 'percentage_to' => 60, 'grade' => 'C', 'status' => 'Pass', 'remark' => 'Satisfactory'],
+        ['percentage_from' => 61, 'percentage_to' => 70, 'grade' => 'B', 'status' => 'Pass', 'remark' => 'Good'],
+        ['percentage_from' => 71, 'percentage_to' => 80, 'grade' => 'B+', 'status' => 'Pass', 'remark' => 'Good'],
+        ['percentage_from' => 81, 'percentage_to' => 90, 'grade' => 'A', 'status' => 'Pass', 'remark' => 'Very Good'],
+        ['percentage_from' => 91, 'percentage_to' => 100, 'grade' => 'A+', 'status' => 'Pass', 'remark' => 'Excellent'],
     ]);
     if (is_array($criteria) && array_key_exists('percentage_from', $criteria)) {
         $criteria = collect($criteria['percentage_from'])->map(fn ($from, $index) => [
@@ -21,6 +21,7 @@
             'percentage_to' => $criteria['percentage_to'][$index] ?? '',
             'grade' => $criteria['grade'][$index] ?? '',
             'status' => $criteria['status'][$index] ?? 'Pass',
+            'remark' => $criteria['remark'][$index] ?? '',
         ])->all();
     }
     $criteria = collect($criteria)->map(function (array $row): array {
@@ -67,7 +68,7 @@
 </div>
 <div class="overflow-x-auto">
                 <table class="w-full min-w-[620px] text-xs">
-                    <thead class="bg-gray-50 text-left"><tr><th class="p-2">Percentage &gt;=</th><th class="p-2">Percentage &lt;=</th><th class="p-2">Assign Grade</th><th class="p-2">Status</th><th class="p-2">Action</th></tr></thead>
+                    <thead class="bg-gray-50 text-left"><tr><th class="p-2">Percentage &gt;=</th><th class="p-2">Percentage &lt;=</th><th class="p-2">Assign Grade</th><th class="p-2">Status</th><th class="p-2">Remark</th><th class="p-2">Action</th></tr></thead>
                     <tbody id="grade-rows" class="divide-y divide-gray-200">
                         @foreach($criteria as $row)
                             <tr>
@@ -75,6 +76,7 @@
                                 <td class="p-1"><input name="grade_criteria[percentage_to][]" type="number" min="0" max="100" step="0.01" value="{{ $row['percentage_to'] }}" required class="w-full rounded border border-gray-300 px-2 py-2"></td>
                                 <td class="p-1"><input name="grade_criteria[grade][]" value="{{ $row['grade'] }}" maxlength="20" required class="w-full rounded border border-gray-300 px-2 py-2"></td>
                                 <td class="p-1"><input name="grade_criteria[status][]" type="text" value="{{ $row['status'] ?? (($row['grade'] ?? '') === 'F' ? 'Fail' : 'Pass') }}" maxlength="100" placeholder="Pass, Fail, etc." class="w-full rounded border border-gray-300 px-2 py-2"></td>
+                                <td class="p-1"><input name="grade_criteria[remark][]" type="text" value="{{ $row['remark'] ?? '' }}" maxlength="150" placeholder="Good, Excellent, etc." class="w-full rounded border border-gray-300 px-2 py-2"></td>
                                 <td class="p-1 text-center"><button type="button" class="remove-grade-row px-2 py-1 font-bold text-red-600" aria-label="Remove grade row">×</button></td>
                             </tr>
                         @endforeach
@@ -149,7 +151,7 @@ document.getElementById('show-group-form')?.addEventListener('click', () => {
     document.getElementById('group-form').scrollIntoView({behavior: 'smooth', block: 'start'});
 });
 document.getElementById('add-grade-row')?.addEventListener('click', () => {
-    document.getElementById('grade-rows').insertAdjacentHTML('beforeend', `<tr><td class="p-1"><input name="grade_criteria[percentage_from][]" type="number" min="0" max="100" step="0.01" required class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[percentage_to][]" type="number" min="0" max="100" step="0.01" required class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[grade][]" maxlength="20" required class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[status][]" type="text" value="Pass" maxlength="100" placeholder="Pass, Fail, etc." class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1 text-center"><button type="button" class="remove-grade-row px-2 py-1 font-bold text-red-600" aria-label="Remove grade row">×</button></td></tr>`);
+    document.getElementById('grade-rows').insertAdjacentHTML('beforeend', `<tr><td class="p-1"><input name="grade_criteria[percentage_from][]" type="number" min="0" max="100" step="0.01" required class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[percentage_to][]" type="number" min="0" max="100" step="0.01" required class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[grade][]" maxlength="20" required class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[status][]" type="text" value="Pass" maxlength="100" placeholder="Pass, Fail, etc." class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1"><input name="grade_criteria[remark][]" type="text" maxlength="150" placeholder="Good, Excellent, etc." class="w-full rounded border border-gray-300 px-2 py-2"></td><td class="p-1 text-center"><button type="button" class="remove-grade-row px-2 py-1 font-bold text-red-600" aria-label="Remove grade row">×</button></td></tr>`);
 });
 document.addEventListener('click', event => {
     if (event.target.closest('.remove-grade-row')) event.target.closest('tr').remove();
