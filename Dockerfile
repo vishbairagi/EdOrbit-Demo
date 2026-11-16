@@ -41,7 +41,14 @@ RUN mkdir -p \
 # Set writable permissions for storage, cache, and database
 RUN chmod -R 777 storage bootstrap/cache database
 
-# Bind port provided by hosting platforms (Render, Railway, Fly, etc.)
+# Default production environments for standalone demo
+ENV APP_NAME="EdOrbit"
+ENV APP_ENV=production
+ENV APP_DEBUG=false
+ENV APP_KEY="base64:5ntNhQ6iHGcYs0JMPFRbYubE0cck/2QlUuq1gRcfwS0="
+ENV DB_CONNECTION=sqlite
+ENV SESSION_DRIVER=file
+ENV CACHE_STORE=file
 ENV PORT=8000
 EXPOSE 8000
 
